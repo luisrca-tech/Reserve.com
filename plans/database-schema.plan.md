@@ -121,12 +121,12 @@ asset).
 
 ### Acceptance criteria
 
-- [ ] `reservation`, `asset`, `restaurant_image` tables + `reservation_status`
+- [x] `reservation`, `asset`, `restaurant_image` tables + `reservation_status`
       and `asset_kind` enums defined per PRD.
-- [ ] `restaurant.menuAssetId` nullable FK added; gallery join carries
+- [x] `restaurant.menuAssetId` nullable FK added; gallery join carries
       `sortOrder`.
-- [ ] `unique(userId, restaurantId, startTime)` and all reservation/asset
+- [x] `unique(userId, restaurantId, startTime)` and all reservation/asset
       indexes present.
-- [ ] All relations defined; FK integrity (no polymorphic columns).
-- [ ] `drizzle-kit generate` migration is clean; typecheck passes; full schema
+- [x] All relations defined; FK integrity (no polymorphic columns).
+- [x] `drizzle-kit generate` migration is clean; typecheck passes; full schema
       (all phases) generates without conflicts.

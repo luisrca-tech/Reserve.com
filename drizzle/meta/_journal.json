@@ -15,6 +15,13 @@
       "when": 1778874475415,
       "tag": "0001_living_vance_astro",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778874994878,
+      "tag": "0002_talented_gideon",
+      "breakpoints": true
     }
   ]
 }

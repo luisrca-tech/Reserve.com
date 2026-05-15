@@ -13,6 +13,16 @@ import {
 
 export const roleEnum = pgEnum("role", ["client", "restaurant_owner"]);
 
+export const reservationStatusEnum = pgEnum("reservation_status", [
+	"pending",
+	"confirmed",
+	"cancelled",
+	"expired",
+	"completed",
+]);
+
+export const assetKindEnum = pgEnum("asset_kind", ["image", "pdf"]);
+
 export const user = pgTable("user", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
@@ -107,6 +117,7 @@ export const restaurant = pgTable(
 			.notNull()
 			.default(false),
 		lowTableThreshold: integer("low_table_threshold").notNull().default(5),
+		menuAssetId: uuid("menu_asset_id").references(() => asset.id),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -144,6 +155,76 @@ export const restaurantAvailability = pgTable(
 	],
 );
 
+export const asset = pgTable(
+	"asset",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		url: text("url").notNull(),
+		mimeType: text("mime_type").notNull(),
+		kind: assetKindEnum("kind").notNull(),
+		sizeBytes: integer("size_bytes"),
+		uploadedById: text("uploaded_by_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [index("asset_uploaded_by_id_idx").on(table.uploadedById)],
+);
+
+export const reservation = pgTable(
+	"reservation",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		restaurantId: uuid("restaurant_id")
+			.notNull()
+			.references(() => restaurant.id, { onDelete: "cascade" }),
+		startTime: timestamp("start_time", { withTimezone: true }).notNull(),
+		endTime: timestamp("end_time", { withTimezone: true }).notNull(),
+		status: reservationStatusEnum("status").notNull().default("pending"),
+		validatedAt: timestamp("validated_at", { withTimezone: true }),
+		cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("reservation_user_restaurant_start_unique").on(
+			table.userId,
+			table.restaurantId,
+			table.startTime,
+		),
+		index("reservation_restaurant_start_status_idx").on(
+			table.restaurantId,
+			table.startTime,
+			table.status,
+		),
+		index("reservation_user_id_idx").on(table.userId),
+		index("reservation_status_start_idx").on(table.status, table.startTime),
+	],
+);
+
+export const restaurantImage = pgTable(
+	"restaurant_image",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		restaurantId: uuid("restaurant_id")
+			.notNull()
+			.references(() => restaurant.id, { onDelete: "cascade" }),
+		assetId: uuid("asset_id")
+			.notNull()
+			.references(() => asset.id, { onDelete: "cascade" }),
+		sortOrder: integer("sort_order").notNull(),
+	},
+	(table) => [
+		index("restaurant_image_restaurant_id_idx").on(table.restaurantId),
+	],
+);
+
 export const categoryRelations = relations(category, ({ many }) => ({
 	restaurants: many(restaurant),
 }));
@@ -157,8 +238,46 @@ export const restaurantRelations = relations(restaurant, ({ one, many }) => ({
 		fields: [restaurant.categoryId],
 		references: [category.id],
 	}),
+	menuAsset: one(asset, {
+		fields: [restaurant.menuAssetId],
+		references: [asset.id],
+	}),
 	availability: many(restaurantAvailability),
+	reservations: many(reservation),
+	images: many(restaurantImage),
 }));
+
+export const assetRelations = relations(asset, ({ one }) => ({
+	uploadedBy: one(user, {
+		fields: [asset.uploadedById],
+		references: [user.id],
+	}),
+}));
+
+export const reservationRelations = relations(reservation, ({ one }) => ({
+	user: one(user, {
+		fields: [reservation.userId],
+		references: [user.id],
+	}),
+	restaurant: one(restaurant, {
+		fields: [reservation.restaurantId],
+		references: [restaurant.id],
+	}),
+}));
+
+export const restaurantImageRelations = relations(
+	restaurantImage,
+	({ one }) => ({
+		restaurant: one(restaurant, {
+			fields: [restaurantImage.restaurantId],
+			references: [restaurant.id],
+		}),
+		asset: one(asset, {
+			fields: [restaurantImage.assetId],
+			references: [asset.id],
+		}),
+	}),
+);
 
 export const restaurantAvailabilityRelations = relations(
 	restaurantAvailability,
@@ -177,6 +296,8 @@ export const userRelations = relations(user, ({ many, one }) => ({
 		fields: [user.id],
 		references: [restaurant.ownerId],
 	}),
+	reservations: many(reservation),
+	uploadedAssets: many(asset),
 }));
 
 export const accountRelations = relations(account, ({ one }) => ({
