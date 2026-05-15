@@ -16,7 +16,7 @@ set -a
 source .env
 
 DB_PASSWORD=$(echo "$DATABASE_URL" | awk -F':' '{print $3}' | awk -F'@' '{print $1}')
-DB_PORT=$(echo "$DATABASE_URL" | awk -F':' '{print $4}' | awk -F'\/' '{print $1}')
+DB_PORT=$(echo "$DATABASE_URL" | awk -F':' '{print $4}' | awk -F'/' '{print $1}')
 DB_NAME=$(echo "$DATABASE_URL" | awk -F'/' '{print $4}')
 DB_CONTAINER_NAME="$DB_NAME-postgres"
 
@@ -33,7 +33,13 @@ elif [ -x "$(command -v podman)" ]; then
 fi
 
 if ! $DOCKER_CMD info > /dev/null 2>&1; then
-  echo "$DOCKER_CMD daemon is not running. Please start $DOCKER_CMD and try again."
+  echo "Cannot reach the $DOCKER_CMD daemon (engine is not running or not accessible from this shell)."
+  echo ""
+  echo "This script only starts a Postgres container; it does not start Docker itself."
+  echo "- Windows + WSL: open Docker Desktop on Windows, wait until it is \"Running\", then enable"
+  echo "  Settings → Resources → WSL integration for this distro. Retry from WSL."
+  echo "- Linux (native): sudo systemctl start docker   (or your distro equivalent)"
+  echo "- macOS: open Docker Desktop and wait until it is ready."
   exit 1
 fi
 
