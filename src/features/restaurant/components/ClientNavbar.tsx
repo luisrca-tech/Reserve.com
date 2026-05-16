@@ -6,6 +6,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { useAuth } from "~/features/auth/MockAuthContext";
+import { ProfileDialog } from "~/features/profile/components/ProfileDialog";
+import { profileCopy } from "~/features/profile/copy";
 import { browseCopy } from "../copy";
 import { useBrowse } from "./RestaurantBrowseContext";
 
@@ -20,6 +22,7 @@ export function ClientNavbar() {
 		closeMobileSearch,
 	} = useBrowse();
 	const [menuOpen, setMenuOpen] = useState(false);
+	const [profileOpen, setProfileOpen] = useState(false);
 
 	const initial = user?.name?.charAt(0).toUpperCase() ?? "?";
 
@@ -31,8 +34,14 @@ export function ClientNavbar() {
 	function handleLogout() {
 		logout();
 		setMenuOpen(false);
+		setProfileOpen(false);
 		toast.success(browseCopy.logoutSuccess);
 		router.push("/");
+	}
+
+	function openProfile() {
+		setMenuOpen(false);
+		setProfileOpen(true);
 	}
 
 	const iconBtn =
@@ -131,7 +140,14 @@ export function ClientNavbar() {
 										</div>
 									</div>
 									<button
-										className="mt-2 w-full rounded-md px-3 py-2 text-left text-red text-sm transition-colors hover:bg-red-soft"
+										className="mt-2 w-full rounded-md px-3 py-2 text-left text-sm text-text transition-colors hover:bg-surface2"
+										onClick={openProfile}
+										type="button"
+									>
+										{profileCopy.trigger}
+									</button>
+									<button
+										className="w-full rounded-md px-3 py-2 text-left text-red text-sm transition-colors hover:bg-red-soft"
 										onClick={handleLogout}
 										type="button"
 									>
@@ -181,6 +197,12 @@ export function ClientNavbar() {
 					</button>
 				</div>
 			)}
+
+			<ProfileDialog
+				onLogout={handleLogout}
+				onOpenChange={setProfileOpen}
+				open={profileOpen}
+			/>
 		</>
 	);
 }

@@ -24,6 +24,8 @@ interface NewReservationInput {
 interface ReservationStoreValue {
 	reservations: MockReservation[];
 	addReservation: (input: NewReservationInput) => MockReservation;
+	/** Cancels a reservation (→ cancelled), freeing its slot capacity. */
+	cancelReservation: (id: string) => void;
 }
 
 const ReservationStoreContext = createContext<ReservationStoreValue | null>(
@@ -62,9 +64,20 @@ export function ReservationStoreProvider({
 		return reservation;
 	}, []);
 
+	const cancelReservation = useCallback((id: string) => {
+		const now = new Date();
+		setReservations((prev) =>
+			prev.map((r) =>
+				r.id === id && r.status !== "cancelled"
+					? { ...r, status: "cancelled", cancelledAt: now }
+					: r,
+			),
+		);
+	}, []);
+
 	const value = useMemo<ReservationStoreValue>(
-		() => ({ reservations, addReservation }),
-		[reservations, addReservation],
+		() => ({ reservations, addReservation, cancelReservation }),
+		[reservations, addReservation, cancelReservation],
 	);
 
 	return (

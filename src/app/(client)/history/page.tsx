@@ -1,10 +1,5 @@
-import { PlaceholderScreen } from "~/components/PlaceholderScreen";
+import { ReservationHistory } from "~/features/reservation/components/ReservationHistory";
 
 export default function HistoryPage() {
-	return (
-		<PlaceholderScreen
-			subtitle="Em breve: reserva ativa e reservas anteriores (Fase 4)."
-			title="Histórico"
-		/>
-	);
+	return <ReservationHistory />;
 }
