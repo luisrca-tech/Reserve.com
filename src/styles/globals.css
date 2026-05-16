@@ -1,8 +1,140 @@
 @import "tailwindcss";
 @import "@uploadthing/react/styles.css";
 
-@theme {
+/*
+ * ReServe design system — ported from the static prototype
+ * (ReServe/css/style.css :root). Dark-only, no theme toggle.
+ */
+:root {
+	--bg: #0f0f0f;
+	--surface: #171717;
+	--surface2: #1e1e1e;
+	--surface3: #252525;
+	--border: #2c2c2c;
+	--border2: #383838;
+	--accent: #e07534;
+	--accent-hover: #c9611c;
+	--accent-soft: rgba(224, 117, 52, 0.12);
+	--green: #3ecf8e;
+	--green-soft: rgba(62, 207, 142, 0.12);
+	--red: #e84040;
+	--red-soft: rgba(232, 64, 64, 0.12);
+	--yellow: #f0b429;
+	--yellow-soft: rgba(240, 180, 41, 0.12);
+	--text: #f2ede6;
+	--text2: #c4bdb4;
+	--muted: #7a7470;
+	--radius: 14px;
+	--radius-sm: 8px;
+	--shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+	--shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.7);
+
+	/* shadcn semantic variables remapped onto the ReServe palette */
+	--background: var(--bg);
+	--foreground: var(--text);
+	--card: var(--surface);
+	--card-foreground: var(--text);
+	--popover: var(--surface);
+	--popover-foreground: var(--text);
+	--primary: var(--accent);
+	--primary-foreground: #ffffff;
+	--secondary: var(--surface2);
+	--secondary-foreground: var(--text);
+	--muted-bg: var(--surface2);
+	--muted-foreground: var(--muted);
+	--accent-bg: var(--surface3);
+	--accent-foreground: var(--text);
+	--destructive: var(--red);
+	--destructive-foreground: #ffffff;
+	--input: var(--border);
+	--ring: var(--accent);
+}
+
+@theme inline {
 	--font-sans:
-		var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
-		"Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+		var(--font-outfit), "Outfit", ui-sans-serif, system-ui, sans-serif;
+	--font-serif: var(--font-cormorant), "Cormorant Garamond", serif;
+
+	--color-bg: var(--bg);
+	--color-surface: var(--surface);
+	--color-surface2: var(--surface2);
+	--color-surface3: var(--surface3);
+	--color-border-base: var(--border);
+	--color-border2: var(--border2);
+	--color-accent: var(--accent);
+	--color-accent-hover: var(--accent-hover);
+	--color-accent-soft: var(--accent-soft);
+	--color-green: var(--green);
+	--color-green-soft: var(--green-soft);
+	--color-red: var(--red);
+	--color-red-soft: var(--red-soft);
+	--color-yellow: var(--yellow);
+	--color-yellow-soft: var(--yellow-soft);
+	--color-text: var(--text);
+	--color-text2: var(--text2);
+	--color-muted: var(--muted);
+
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted-bg: var(--muted-bg);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent-bg: var(--accent-bg);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+
+	--radius-base: var(--radius);
+	--radius-sm: var(--radius-sm);
+
+	--shadow-reserve: var(--shadow);
+	--shadow-reserve-lg: var(--shadow-lg);
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html {
+	scroll-behavior: smooth;
+}
+
+body {
+	background: var(--bg);
+	color: var(--text);
+	font-family: var(--font-outfit), "Outfit", sans-serif;
+	min-height: 100vh;
+	overflow-x: hidden;
+}
+
+/* Custom scrollbar — ported from prototype */
+::-webkit-scrollbar {
+	width: 6px;
+}
+::-webkit-scrollbar-track {
+	background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+	background: var(--border2);
+	border-radius: 3px;
+}
+
+@keyframes reserve-fade-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
