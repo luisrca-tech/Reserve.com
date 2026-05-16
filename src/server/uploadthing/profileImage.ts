@@ -6,6 +6,11 @@ import type { auth } from "~/server/better-auth";
 import type { db } from "~/server/db";
 import { asset, user } from "~/server/db/schema";
 
+import {
+	isPublicUploadMode,
+	resolveDemoUploadUserId,
+} from "./publicUploadMode";
+
 export const ALLOWED_PROFILE_IMAGE_MIMES = new Set([
 	"image/jpeg",
 	"image/png",
@@ -18,7 +23,12 @@ type Db = typeof db;
 export async function resolveProfileUploadMetadata(opts: {
 	headers: Headers;
 	auth: Auth;
+	db: Db;
 }) {
+	if (isPublicUploadMode()) {
+		return { userId: await resolveDemoUploadUserId(opts.db) };
+	}
+
 	const session = await opts.auth.api.getSession({ headers: opts.headers });
 
 	if (!session?.user) {

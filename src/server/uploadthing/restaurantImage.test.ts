@@ -5,6 +5,11 @@ import {
 	resolveRestaurantUploadMetadata,
 } from "./restaurantImage";
 
+vi.mock("./publicUploadMode", () => ({
+	isPublicUploadMode: () => false,
+	resolveDemoUploadUserId: vi.fn(async () => "demo-user"),
+}));
+
 function makeAuth(session: { user: { id: string; role?: string } } | null) {
 	return {
 		api: { getSession: vi.fn(async () => session) },

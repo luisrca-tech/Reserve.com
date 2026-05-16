@@ -3,6 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { deleteRestaurantImageRecord } from "./restaurantLifecycle";
 
+vi.mock("./publicUploadMode", () => ({
+	isPublicUploadMode: () => false,
+}));
+
 const RESTAURANT_ID = "11111111-1111-1111-1111-111111111111";
 const IMAGE_ID = "22222222-2222-2222-2222-222222222222";
 

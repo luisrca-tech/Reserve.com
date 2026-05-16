@@ -7,6 +7,8 @@ import type { SessionUser } from "~/server/auth/restaurantAccess";
 import type { db } from "~/server/db";
 import { asset, restaurant, restaurantImage } from "~/server/db/schema";
 
+import { isPublicUploadMode } from "./publicUploadMode";
+
 type Db = typeof db;
 
 export async function collectRestaurantUploadKeys(
@@ -57,14 +59,16 @@ export async function deleteRestaurantImageRecord(
 		throw new TRPCError({ code: "NOT_FOUND" });
 	}
 
-	const allowed = await canManageRestaurant(
-		deps.db,
-		deps.user,
-		row.restaurantId,
-	);
+	if (!isPublicUploadMode()) {
+		const allowed = await canManageRestaurant(
+			deps.db,
+			deps.user,
+			row.restaurantId,
+		);
 
-	if (!allowed) {
-		throw new TRPCError({ code: "FORBIDDEN" });
+		if (!allowed) {
+			throw new TRPCError({ code: "FORBIDDEN" });
+		}
 	}
 
 	if (row.asset.key) {

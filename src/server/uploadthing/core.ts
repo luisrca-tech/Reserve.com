@@ -28,7 +28,7 @@ export const uploadRouter = {
 		"image/webp": { maxFileSize: "4MB", maxFileCount: 1 },
 	})
 		.middleware(async ({ req }) =>
-			resolveProfileUploadMetadata({ headers: req.headers, auth }),
+			resolveProfileUploadMetadata({ headers: req.headers, auth, db }),
 		)
 		.onUploadComplete(async ({ metadata, file }) => {
 			if (!ALLOWED_PROFILE_IMAGE_MIMES.has(file.type)) {

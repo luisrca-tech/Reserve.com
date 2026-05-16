@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { completeProfileUpload, resolveProfileUploadMetadata } from "./profileImage";
 
+vi.mock("./publicUploadMode", () => ({
+	isPublicUploadMode: () => false,
+}));
+
 function makeAuth(session: { user: { id: string } } | null) {
 	return {
 		api: { getSession: vi.fn(async () => session) },
@@ -56,6 +60,7 @@ describe("resolveProfileUploadMetadata", () => {
 			resolveProfileUploadMetadata({
 				headers: new Headers(),
 				auth: makeAuth(null),
+				db: makeDb({ calls: [] }),
 			}),
 		).rejects.toThrow();
 	});
@@ -64,6 +69,7 @@ describe("resolveProfileUploadMetadata", () => {
 		const result = await resolveProfileUploadMetadata({
 			headers: new Headers(),
 			auth: makeAuth({ user: { id: "session-user" } }),
+			db: makeDb({ calls: [] }),
 		});
 		expect(result).toEqual({ userId: "session-user" });
 	});

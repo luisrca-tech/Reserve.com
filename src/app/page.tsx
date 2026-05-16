@@ -1,152 +1,22 @@
-import { headers } from "next/headers";
-import Link from "next/link";
-import { redirect } from "next/navigation";
-
 import { ProfileImageUpload } from "~/app/profile-image-upload";
 import { RestaurantGalleryUpload } from "~/app/restaurant-gallery-upload";
-import { auth } from "~/server/better-auth";
-import { getSession } from "~/server/better-auth/server";
 import { HydrateClient } from "~/trpc/server";
 
-export default async function Home() {
-	const session = await getSession();
-
+export default function Home() {
 	return (
 		<HydrateClient>
 			<main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-				<div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-					<h1 className="font-extrabold text-5xl tracking-tight sm:text-[5rem]">
-						Create <span className="text-[hsl(280,100%,70%)]">T3</span> App
-					</h1>
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-						<Link
-							className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-							href="https://create.t3.gg/en/usage/first-steps"
-							target="_blank"
-						>
-							<h3 className="font-bold text-2xl">First Steps →</h3>
-							<div className="text-lg">
-								Just the basics - Everything you need to know to set up your
-								database and authentication.
-							</div>
-						</Link>
-						<Link
-							className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-							href="https://create.t3.gg/en/introduction"
-							target="_blank"
-						>
-							<h3 className="font-bold text-2xl">Documentation →</h3>
-							<div className="text-lg">
-								Learn more about Create T3 App, the libraries it uses, and how
-								to deploy it.
-							</div>
-						</Link>
-					</div>
-					<div className="flex flex-col items-center gap-2">
-						<div className="flex flex-col items-center justify-center gap-4">
-							<p className="text-center text-2xl text-white">
-								{session && <span>Logged in as {session.user?.name}</span>}
-							</p>
-							{!session ? (
-								<form className="flex w-full max-w-sm flex-col gap-3">
-									<input
-										className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder:text-white/50"
-										name="name"
-										placeholder="Display name (sign up only)"
-										type="text"
-									/>
-									<input
-										className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder:text-white/50"
-										name="email"
-										placeholder="Email"
-										required
-										type="email"
-									/>
-									<input
-										className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder:text-white/50"
-										name="password"
-										placeholder="Password"
-										required
-										type="password"
-									/>
-									<div className="flex flex-wrap justify-center gap-2">
-										<button
-											className="rounded-full bg-white/10 px-6 py-3 font-semibold no-underline transition hover:bg-white/20"
-											formAction={async (formData) => {
-												"use server";
-												const email = formData.get("email");
-												const password = formData.get("password");
-												if (
-													typeof email !== "string" ||
-													typeof password !== "string"
-												) {
-													throw new Error("Email and password are required");
-												}
-												await auth.api.signInEmail({
-													body: { email, password },
-													headers: await headers(),
-												});
-												redirect("/");
-											}}
-											type="submit"
-										>
-											Sign in
-										</button>
-										<button
-											className="rounded-full bg-white/10 px-6 py-3 font-semibold no-underline transition hover:bg-white/20"
-											formAction={async (formData) => {
-												"use server";
-												const email = formData.get("email");
-												const password = formData.get("password");
-												const name = formData.get("name");
-												if (
-													typeof email !== "string" ||
-													typeof password !== "string"
-												) {
-													throw new Error("Email and password are required");
-												}
-												const displayName =
-													typeof name === "string" && name.trim().length > 0
-														? name.trim()
-														: (email.split("@")[0] ?? "User");
-												await auth.api.signUpEmail({
-													body: {
-														email,
-														password,
-														name: displayName,
-													},
-													headers: await headers(),
-												});
-												redirect("/");
-											}}
-											type="submit"
-										>
-											Create account
-										</button>
-									</div>
-								</form>
-							) : (
-								<>
-									<ProfileImageUpload />
-									<RestaurantGalleryUpload />
-									<form>
-									<button
-										className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
-										formAction={async () => {
-											"use server";
-											await auth.api.signOut({
-												headers: await headers(),
-											});
-											redirect("/");
-										}}
-										type="submit"
-									>
-										Sign out
-									</button>
-								</form>
-								</>
-							)}
-						</div>
+				<div className="container flex flex-col items-center justify-center gap-8 px-4 py-16">
+					<h1 className="font-bold text-3xl tracking-tight">Media upload</h1>
+					<div className="flex w-full max-w-md flex-col items-center gap-8">
+						<section className="flex w-full flex-col items-center gap-2">
+							<h2 className="text-lg text-white/80">Profile image</h2>
+							<ProfileImageUpload />
+						</section>
+						<section className="flex w-full flex-col items-center gap-2">
+							<h2 className="text-lg text-white/80">Restaurant gallery</h2>
+							<RestaurantGalleryUpload />
+						</section>
 					</div>
 				</div>
 			</main>

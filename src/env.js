@@ -16,6 +16,8 @@ export const env = createEnv({
 			.enum(["development", "test", "production"])
 			.default("development"),
 		UPLOADTHING_TOKEN: z.string(),
+		UPLOADTHING_PUBLIC_UPLOADS: z.enum(["true", "false"]).optional(),
+		DEMO_UPLOAD_USER_ID: z.string().optional(),
 	},
 
 	/**
@@ -36,6 +38,8 @@ export const env = createEnv({
 		DATABASE_URL: process.env.DATABASE_URL,
 		NODE_ENV: process.env.NODE_ENV,
 		UPLOADTHING_TOKEN: process.env.UPLOADTHING_TOKEN,
+		UPLOADTHING_PUBLIC_UPLOADS: process.env.UPLOADTHING_PUBLIC_UPLOADS,
+		DEMO_UPLOAD_USER_ID: process.env.DEMO_UPLOAD_USER_ID,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

@@ -4,7 +4,12 @@ import { UploadThingError } from "uploadthing/server";
 import { canManageRestaurant } from "~/server/auth/restaurantAccess";
 import type { auth } from "~/server/better-auth";
 import type { db } from "~/server/db";
-import { asset, restaurantImage } from "~/server/db/schema";
+import { asset, restaurant, restaurantImage } from "~/server/db/schema";
+
+import {
+	isPublicUploadMode,
+	resolveDemoUploadUserId,
+} from "./publicUploadMode";
 
 export const ALLOWED_RESTAURANT_IMAGE_MIMES = new Set([
 	"image/jpeg",
@@ -21,6 +26,22 @@ export async function resolveRestaurantUploadMetadata(opts: {
 	restaurantId: string;
 	db: Db;
 }) {
+	if (isPublicUploadMode()) {
+		const exists = await opts.db.query.restaurant.findFirst({
+			where: eq(restaurant.id, opts.restaurantId),
+			columns: { id: true },
+		});
+
+		if (!exists) {
+			throw new UploadThingError("Restaurant not found");
+		}
+
+		return {
+			userId: await resolveDemoUploadUserId(opts.db),
+			restaurantId: opts.restaurantId,
+		};
+	}
+
 	const session = await opts.auth.api.getSession({ headers: opts.headers });
 
 	if (!session?.user) {
