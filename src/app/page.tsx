@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { ProfileImageUpload } from "~/app/profile-image-upload";
 import { auth } from "~/server/better-auth";
 import { getSession } from "~/server/better-auth/server";
 import { HydrateClient } from "~/trpc/server";
@@ -124,7 +125,9 @@ export default async function Home() {
 									</div>
 								</form>
 							) : (
-								<form>
+								<>
+									<ProfileImageUpload />
+									<form>
 									<button
 										className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
 										formAction={async () => {
@@ -139,6 +142,7 @@ export default async function Home() {
 										Sign out
 									</button>
 								</form>
+								</>
 							)}
 						</div>
 					</div>
