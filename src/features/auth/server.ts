@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "./cookie";
+import { ONBOARDED_COOKIE, SESSION_COOKIE } from "./cookie";
 import { toSessionUser } from "./mappers";
 import { mockUsersById } from "./mock/users";
 import type { SessionUser } from "./types";
@@ -13,5 +13,8 @@ export async function getServerSessionUser(): Promise<SessionUser | null> {
 	if (!userId) return null;
 
 	const user = mockUsersById[userId];
-	return user ? toSessionUser(user) : null;
+	if (!user) return null;
+
+	const onboarded = store.get(ONBOARDED_COOKIE)?.value === "1";
+	return toSessionUser(user, onboarded);
 }

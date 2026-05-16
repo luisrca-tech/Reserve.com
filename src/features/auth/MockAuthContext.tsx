@@ -9,8 +9,11 @@ import {
 	useState,
 } from "react";
 import {
+	clearOnboardedCookie,
 	clearSessionCookie,
+	readOnboardedCookie,
 	readSessionCookie,
+	writeOnboardedCookie,
 	writeSessionCookie,
 } from "./cookie";
 import { toSessionUser } from "./mappers";
@@ -28,6 +31,8 @@ interface AuthContextValue {
 	user: SessionUser | null;
 	loginAs: (key: SeededUserKey) => SessionUser;
 	updateProfile: (values: ProfileUpdate) => void;
+	/** Promotes the current owner to owner-with-restaurant after onboarding. */
+	completeOnboarding: () => void;
 	logout: () => void;
 }
 
@@ -40,10 +45,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		const id = readSessionCookie();
 		if (!id) return;
 		const row = mockUsersById[id];
-		if (row) setUser(toSessionUser(row));
+		if (row) setUser(toSessionUser(row, readOnboardedCookie()));
 	}, []);
 
 	const loginAs = useCallback((key: SeededUserKey) => {
+		clearOnboardedCookie();
 		const session = toSessionUser(mockUsers[key]);
 		writeSessionCookie(session.id);
 		setUser(session);
@@ -63,14 +69,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		);
 	}, []);
 
+	const completeOnboarding = useCallback(() => {
+		writeOnboardedCookie();
+		setUser((prev) => (prev ? { ...prev, hasRestaurant: true } : prev));
+	}, []);
+
 	const logout = useCallback(() => {
 		clearSessionCookie();
+		clearOnboardedCookie();
 		setUser(null);
 	}, []);
 
 	const value = useMemo<AuthContextValue>(
-		() => ({ user, loginAs, updateProfile, logout }),
-		[user, loginAs, updateProfile, logout],
+		() => ({ user, loginAs, updateProfile, completeOnboarding, logout }),
+		[user, loginAs, updateProfile, completeOnboarding, logout],
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
