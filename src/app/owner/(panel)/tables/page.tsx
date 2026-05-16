@@ -1,10 +1,5 @@
-import { PlaceholderScreen } from "~/components/PlaceholderScreen";
+import { OwnerTables } from "~/features/owner/components/OwnerTables";
 
 export default function TablesPage() {
-	return (
-		<PlaceholderScreen
-			subtitle="Em breve: uso de mesas por horário e ajuste do total (Fase 6)."
-			title="Mesas"
-		/>
-	);
+	return <OwnerTables />;
 }

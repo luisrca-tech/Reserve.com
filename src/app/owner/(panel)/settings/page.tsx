@@ -1,10 +1,5 @@
-import { PlaceholderScreen } from "~/components/PlaceholderScreen";
+import { OwnerSettings } from "~/features/owner/components/OwnerSettings";
 
 export default function SettingsPage() {
-	return (
-		<PlaceholderScreen
-			subtitle="Em breve: editar nome, telefone, bio e disponibilidade (Fase 6)."
-			title="Configurações"
-		/>
-	);
+	return <OwnerSettings />;
 }

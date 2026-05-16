@@ -1,10 +1,5 @@
-import { PlaceholderScreen } from "~/components/PlaceholderScreen";
+import { OwnerReservations } from "~/features/owner/components/OwnerReservations";
 
 export default function ReservationsPage() {
-	return (
-		<PlaceholderScreen
-			subtitle="Em breve: lista de reservas, validação e auto-confirmação (Fase 6)."
-			title="Reservas"
-		/>
-	);
+	return <OwnerReservations />;
 }

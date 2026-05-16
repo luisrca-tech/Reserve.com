@@ -1,10 +1,5 @@
-import { PlaceholderScreen } from "~/components/PlaceholderScreen";
+import { OwnerOverview } from "~/features/owner/components/OwnerOverview";
 
 export default function OverviewPage() {
-	return (
-		<PlaceholderScreen
-			subtitle="Em breve: estatísticas e reservas do dia (Fase 6)."
-			title="Visão geral"
-		/>
-	);
+	return <OwnerOverview />;
 }

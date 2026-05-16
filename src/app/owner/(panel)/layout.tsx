@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getServerSessionUser } from "~/features/auth/server";
+import { OwnerShell } from "~/features/owner/components/OwnerShell";
 
 /**
  * Dashboard gate: an owner that has not completed onboarding is forced
@@ -15,5 +16,5 @@ export default async function OwnerPanelLayout({
 	const user = await getServerSessionUser();
 	if (!user || user.role !== "restaurant_owner") redirect("/");
 	if (!user.hasRestaurant) redirect("/owner/onboarding");
-	return children;
+	return <OwnerShell>{children}</OwnerShell>;
 }
