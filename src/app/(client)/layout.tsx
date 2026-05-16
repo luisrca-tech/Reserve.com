@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getServerSessionUser } from "~/features/auth/server";
+import { ClientShell } from "~/features/restaurant/components/ClientShell";
 
 export default async function ClientLayout({
 	children,
@@ -18,5 +19,5 @@ export default async function ClientLayout({
 				: "/",
 		);
 	}
-	return children;
+	return <ClientShell>{children}</ClientShell>;
 }

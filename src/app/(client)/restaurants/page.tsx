@@ -1,10 +1,5 @@
-import { PlaceholderScreen } from "~/components/PlaceholderScreen";
+import { RestaurantBrowse } from "~/features/restaurant/components/RestaurantBrowse";
 
 export default function RestaurantsPage() {
-	return (
-		<PlaceholderScreen
-			subtitle="Em breve: navegação, busca e detalhes dos restaurantes (Fase 2)."
-			title="Restaurantes"
-		/>
-	);
+	return <RestaurantBrowse />;
 }
