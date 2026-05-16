@@ -3,9 +3,8 @@
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { toast } from "sonner";
 
-import { Button } from "~/components/ui/Button";
+import { BookingFlow } from "~/features/reservation/components/BookingFlow";
 import { detailCopy } from "../copy";
 import { formatAvailability } from "../mappers";
 import type { RestaurantView } from "../types";
@@ -105,15 +104,7 @@ export function RestaurantDetail({
 						</div>
 					</div>
 
-					<div className="flex justify-end border-[var(--border)] border-t p-6">
-						<Button
-							onClick={() => toast.info(detailCopy.bookComingSoon)}
-							size="lg"
-							type="button"
-						>
-							{detailCopy.bookCta}
-						</Button>
-					</div>
+					<BookingFlow restaurant={restaurant} />
 				</div>
 			</div>
 		</div>
