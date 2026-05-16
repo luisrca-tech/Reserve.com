@@ -1,41 +1,41 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1778874151837,
-      "tag": "0000_auth_and_user_role",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1778874475415,
-      "tag": "0001_restaurant_domain",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1778874994878,
-      "tag": "0002_reservation_and_assets",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1778953630495,
-      "tag": "0003_asset_key",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1778955739100,
-      "tag": "0004_nostalgic_the_spike",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1778874151837,
+			"tag": "0000_auth_and_user_role",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1778874475415,
+			"tag": "0001_restaurant_domain",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1778874994878,
+			"tag": "0002_reservation_and_assets",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1778953630495,
+			"tag": "0003_asset_key",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1778955739100,
+			"tag": "0004_nostalgic_the_spike",
+			"breakpoints": true
+		}
+	]
 }

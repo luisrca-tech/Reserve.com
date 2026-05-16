@@ -18,6 +18,7 @@ const DialogOverlay = React.forwardRef<
 	<DialogPrimitive.Overlay
 		className={cn(
 			"fixed inset-0 z-[500] bg-black/75 backdrop-blur-[8px]",
+			"data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=closed]:animate-out data-[state=open]:animate-in",
 			className,
 		)}
 		ref={ref}
@@ -26,27 +27,39 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
+const sizeClass = {
+	default: "max-w-[520px]",
+	lg: "max-w-[680px]",
+	xl: "max-w-[820px]",
+} as const;
+
 const DialogContent = React.forwardRef<
 	React.ElementRef<typeof DialogPrimitive.Content>,
 	React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
-		size?: "default" | "lg" | "xl";
+		size?: keyof typeof sizeClass;
 	}
 >(({ className, children, size = "default", ...props }, ref) => (
 	<DialogPortal>
 		<DialogOverlay />
 		<DialogPrimitive.Content
 			className={cn(
-				"fixed top-1/2 left-1/2 z-[501] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2",
-				"max-h-[90vh] overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-surface shadow-[var(--shadow-lg)]",
-				size === "default" && "max-w-[520px]",
-				size === "lg" && "max-w-[680px]",
-				size === "xl" && "max-w-[820px]",
+				"fixed top-1/2 left-1/2 z-[501] grid w-[calc(100%-2rem)] gap-4 [transform:translate(-50%,-50%)]",
+				"max-h-[90vh] overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-surface p-6 shadow-[var(--shadow-lg)]",
+				"data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=open]:animate-in",
+				sizeClass[size],
 				className,
 			)}
 			ref={ref}
 			{...props}
 		>
 			{children}
+			<DialogPrimitive.Close
+				aria-label="Fechar"
+				className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-surface2 text-muted transition-all hover:bg-surface3 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+			>
+				<X size={18} />
+				<span className="sr-only">Fechar</span>
+			</DialogPrimitive.Close>
 		</DialogPrimitive.Content>
 	</DialogPortal>
 ));
@@ -54,24 +67,29 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 function DialogHeader({
 	className,
-	children,
+	...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+	return (
+		<div className={cn("flex flex-col gap-1.5 pr-10", className)} {...props} />
+	);
+}
+DialogHeader.displayName = "DialogHeader";
+
+function DialogFooter({
+	className,
 	...props
 }: React.HTMLAttributes<HTMLDivElement>) {
 	return (
 		<div
-			className={cn("flex items-center justify-between p-6 pb-0", className)}
+			className={cn(
+				"flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+				className,
+			)}
 			{...props}
-		>
-			{children}
-			<DialogPrimitive.Close
-				aria-label="Fechar"
-				className="flex h-8 w-8 items-center justify-center rounded-full bg-surface2 text-muted transition-all hover:bg-surface3 hover:text-text"
-			>
-				<X size={18} />
-			</DialogPrimitive.Close>
-		</div>
+		/>
 	);
 }
+DialogFooter.displayName = "DialogFooter";
 
 const DialogTitle = React.forwardRef<
 	React.ElementRef<typeof DialogPrimitive.Title>,
@@ -97,19 +115,12 @@ const DialogDescription = React.forwardRef<
 ));
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
-function DialogBody({
-	className,
-	...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-	return <div className={cn("p-6", className)} {...props} />;
-}
-
 export {
 	Dialog,
-	DialogBody,
 	DialogClose,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogOverlay,
 	DialogPortal,

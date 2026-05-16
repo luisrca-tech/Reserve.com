@@ -57,7 +57,7 @@ export function RestaurantGalleryUpload() {
 					}}
 				/>
 			) : restaurantId.length > 0 ? (
-				<p className="text-sm text-amber-200/90">
+				<p className="text-amber-200/90 text-sm">
 					Invalid UUID format. Copy the id from the restaurant table (Drizzle
 					Studio).
 				</p>

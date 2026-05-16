@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { Button } from "~/components/ui/Button";
 import {
 	Dialog,
-	DialogBody,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
@@ -135,46 +134,44 @@ export function LandingExperience() {
 					<DialogHeader>
 						<DialogTitle>{authCopy.loginClientTitle}</DialogTitle>
 					</DialogHeader>
-					<DialogBody>
-						<form
-							onSubmit={(e) => {
-								e.preventDefault();
-								authenticate("client", authCopy.loginSuccess);
-							}}
-						>
-							<div className="mb-5">
-								<Label htmlFor="loginEmail">{authCopy.emailLabel}</Label>
-								<Input
-									id="loginEmail"
-									placeholder={authCopy.emailPlaceholder}
-									type="email"
-								/>
-							</div>
-							<div className="mb-5">
-								<Label htmlFor="loginPass">{authCopy.passwordLabel}</Label>
-								<Input
-									id="loginPass"
-									placeholder={authCopy.passwordPlaceholder}
-									type="password"
-								/>
-							</div>
-							<Button full size="lg" type="submit">
-								{authCopy.loginClientSubmit}
-							</Button>
-						</form>
-						<div className="my-5 flex items-center gap-4 before:h-px before:flex-1 before:bg-[var(--border)] after:h-px after:flex-1 after:bg-[var(--border)]">
-							<span className="whitespace-nowrap text-[0.8rem] text-muted">
-								{authCopy.noAccount}
-							</span>
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							authenticate("client", authCopy.loginSuccess);
+						}}
+					>
+						<div className="mb-5">
+							<Label htmlFor="loginEmail">{authCopy.emailLabel}</Label>
+							<Input
+								id="loginEmail"
+								placeholder={authCopy.emailPlaceholder}
+								type="email"
+							/>
 						</div>
-						<Button
-							full
-							onClick={() => openRegister("client")}
-							variant="secondary"
-						>
-							{authCopy.createFreeAccount}
+						<div className="mb-5">
+							<Label htmlFor="loginPass">{authCopy.passwordLabel}</Label>
+							<Input
+								id="loginPass"
+								placeholder={authCopy.passwordPlaceholder}
+								type="password"
+							/>
+						</div>
+						<Button full size="lg" type="submit">
+							{authCopy.loginClientSubmit}
 						</Button>
-					</DialogBody>
+					</form>
+					<div className="my-5 flex items-center gap-4 before:h-px before:flex-1 before:bg-[var(--border)] after:h-px after:flex-1 after:bg-[var(--border)]">
+						<span className="whitespace-nowrap text-[0.8rem] text-muted">
+							{authCopy.noAccount}
+						</span>
+					</div>
+					<Button
+						full
+						onClick={() => openRegister("client")}
+						variant="secondary"
+					>
+						{authCopy.createFreeAccount}
+					</Button>
 				</DialogContent>
 			</Dialog>
 
@@ -187,48 +184,46 @@ export function LandingExperience() {
 					<DialogHeader>
 						<DialogTitle>{authCopy.loginRestaurantTitle}</DialogTitle>
 					</DialogHeader>
-					<DialogBody>
-						<form
-							onSubmit={(e) => {
-								e.preventDefault();
-								authenticate("ownerWithRestaurant", authCopy.loginSuccess);
-							}}
-						>
-							<div className="mb-5">
-								<Label htmlFor="restLoginEmail">
-									{authCopy.corporateEmailLabel}
-								</Label>
-								<Input
-									id="restLoginEmail"
-									placeholder={authCopy.corporateEmailPlaceholder}
-									type="email"
-								/>
-							</div>
-							<div className="mb-5">
-								<Label htmlFor="restLoginPass">{authCopy.passwordLabel}</Label>
-								<Input
-									id="restLoginPass"
-									placeholder={authCopy.passwordPlaceholder}
-									type="password"
-								/>
-							</div>
-							<Button full size="lg" type="submit">
-								{authCopy.loginRestaurantSubmit}
-							</Button>
-						</form>
-						<div className="my-5 flex items-center gap-4 before:h-px before:flex-1 before:bg-[var(--border)] after:h-px after:flex-1 after:bg-[var(--border)]">
-							<span className="whitespace-nowrap text-[0.8rem] text-muted">
-								{authCopy.newRestaurant}
-							</span>
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							authenticate("ownerWithRestaurant", authCopy.loginSuccess);
+						}}
+					>
+						<div className="mb-5">
+							<Label htmlFor="restLoginEmail">
+								{authCopy.corporateEmailLabel}
+							</Label>
+							<Input
+								id="restLoginEmail"
+								placeholder={authCopy.corporateEmailPlaceholder}
+								type="email"
+							/>
 						</div>
-						<Button
-							full
-							onClick={() => openRegister("restaurant")}
-							variant="secondary"
-						>
-							{authCopy.registerRestaurantCta}
+						<div className="mb-5">
+							<Label htmlFor="restLoginPass">{authCopy.passwordLabel}</Label>
+							<Input
+								id="restLoginPass"
+								placeholder={authCopy.passwordPlaceholder}
+								type="password"
+							/>
+						</div>
+						<Button full size="lg" type="submit">
+							{authCopy.loginRestaurantSubmit}
 						</Button>
-					</DialogBody>
+					</form>
+					<div className="my-5 flex items-center gap-4 before:h-px before:flex-1 before:bg-[var(--border)] after:h-px after:flex-1 after:bg-[var(--border)]">
+						<span className="whitespace-nowrap text-[0.8rem] text-muted">
+							{authCopy.newRestaurant}
+						</span>
+					</div>
+					<Button
+						full
+						onClick={() => openRegister("restaurant")}
+						variant="secondary"
+					>
+						{authCopy.registerRestaurantCta}
+					</Button>
 				</DialogContent>
 			</Dialog>
 
@@ -241,94 +236,85 @@ export function LandingExperience() {
 					<DialogHeader>
 						<DialogTitle>{authCopy.registerTitle}</DialogTitle>
 					</DialogHeader>
-					<DialogBody>
-						<Tabs
-							onValueChange={(v) =>
-								setRegisterTab(v as "client" | "restaurant")
-							}
-							value={registerTab}
-						>
-							<TabsList className="mb-6">
-								<TabsTrigger value="client">{authCopy.tabClient}</TabsTrigger>
-								<TabsTrigger value="restaurant">
-									{authCopy.tabRestaurant}
-								</TabsTrigger>
-							</TabsList>
+					<Tabs
+						onValueChange={(v) => setRegisterTab(v as "client" | "restaurant")}
+						value={registerTab}
+					>
+						<TabsList className="mb-6">
+							<TabsTrigger value="client">{authCopy.tabClient}</TabsTrigger>
+							<TabsTrigger value="restaurant">
+								{authCopy.tabRestaurant}
+							</TabsTrigger>
+						</TabsList>
 
-							<TabsContent value="client">
-								<form
-									onSubmit={(e) => {
-										e.preventDefault();
-										authenticate("client", authCopy.registerClientSuccess);
-									}}
-								>
-									<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-										<div className="mb-5">
-											<Label>{authCopy.fullNameLabel}</Label>
-											<Input placeholder={authCopy.fullNamePlaceholder} />
-										</div>
-										<div className="mb-5">
-											<Label>{authCopy.phoneLabel}</Label>
-											<Input placeholder={authCopy.phonePlaceholderClient} />
-										</div>
+						<TabsContent value="client">
+							<form
+								onSubmit={(e) => {
+									e.preventDefault();
+									authenticate("client", authCopy.registerClientSuccess);
+								}}
+							>
+								<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+									<div className="mb-5">
+										<Label>{authCopy.fullNameLabel}</Label>
+										<Input placeholder={authCopy.fullNamePlaceholder} />
 									</div>
 									<div className="mb-5">
-										<Label>{authCopy.emailLabel}</Label>
-										<Input
-											placeholder={authCopy.emailPlaceholder}
-											type="email"
-										/>
+										<Label>{authCopy.phoneLabel}</Label>
+										<Input placeholder={authCopy.phonePlaceholderClient} />
 									</div>
-									<Button full size="lg" type="submit">
-										{authCopy.registerClientSubmit}
-									</Button>
-								</form>
-							</TabsContent>
+								</div>
+								<div className="mb-5">
+									<Label>{authCopy.emailLabel}</Label>
+									<Input placeholder={authCopy.emailPlaceholder} type="email" />
+								</div>
+								<Button full size="lg" type="submit">
+									{authCopy.registerClientSubmit}
+								</Button>
+							</form>
+						</TabsContent>
 
-							<TabsContent value="restaurant">
-								<form
-									onSubmit={(e) => {
-										e.preventDefault();
-										authenticate(
-											"ownerWithoutRestaurant",
-											authCopy.registerRestaurantSuccess,
-										);
-									}}
-								>
-									<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-										<div className="mb-5">
-											<Label>{authCopy.restaurantNameLabel}</Label>
-											<Input placeholder={authCopy.restaurantNamePlaceholder} />
-										</div>
-										<div className="mb-5">
-											<Label>{authCopy.phoneLabel}</Label>
-											<Input
-												placeholder={authCopy.phonePlaceholderRestaurant}
-											/>
-										</div>
+						<TabsContent value="restaurant">
+							<form
+								onSubmit={(e) => {
+									e.preventDefault();
+									authenticate(
+										"ownerWithoutRestaurant",
+										authCopy.registerRestaurantSuccess,
+									);
+								}}
+							>
+								<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+									<div className="mb-5">
+										<Label>{authCopy.restaurantNameLabel}</Label>
+										<Input placeholder={authCopy.restaurantNamePlaceholder} />
 									</div>
 									<div className="mb-5">
-										<Label>{authCopy.corporateEmailLabel}</Label>
-										<Input
-											placeholder={authCopy.corporateEmailPlaceholder}
-											type="email"
-										/>
+										<Label>{authCopy.phoneLabel}</Label>
+										<Input placeholder={authCopy.phonePlaceholderRestaurant} />
 									</div>
-									<div className="mb-5">
-										<Label>{authCopy.addressLabel}</Label>
-										<Input placeholder={authCopy.addressPlaceholder} />
-									</div>
-									<div className="mb-5">
-										<Label>{authCopy.bioLabel}</Label>
-										<Textarea placeholder={authCopy.bioPlaceholder} />
-									</div>
-									<Button full size="lg" type="submit">
-										{authCopy.registerRestaurantSubmit}
-									</Button>
-								</form>
-							</TabsContent>
-						</Tabs>
-					</DialogBody>
+								</div>
+								<div className="mb-5">
+									<Label>{authCopy.corporateEmailLabel}</Label>
+									<Input
+										placeholder={authCopy.corporateEmailPlaceholder}
+										type="email"
+									/>
+								</div>
+								<div className="mb-5">
+									<Label>{authCopy.addressLabel}</Label>
+									<Input placeholder={authCopy.addressPlaceholder} />
+								</div>
+								<div className="mb-5">
+									<Label>{authCopy.bioLabel}</Label>
+									<Textarea placeholder={authCopy.bioPlaceholder} />
+								</div>
+								<Button full size="lg" type="submit">
+									{authCopy.registerRestaurantSubmit}
+								</Button>
+							</form>
+						</TabsContent>
+					</Tabs>
 				</DialogContent>
 			</Dialog>
 		</div>

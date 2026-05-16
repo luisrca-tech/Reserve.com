@@ -67,9 +67,7 @@ export function useAuth(): AuthContextValue {
 export function redirectPathFor(user: SessionUser): string {
 	if (user.role === "client") return "/restaurants";
 	if (user.role === "restaurant_owner") {
-		return user.hasRestaurant
-			? "/restaurant/overview"
-			: "/restaurant/onboarding";
+		return user.hasRestaurant ? "/owner/overview" : "/owner/onboarding";
 	}
 	return "/";
 }

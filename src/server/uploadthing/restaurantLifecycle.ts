@@ -1,9 +1,8 @@
+import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import type { UTApi } from "uploadthing/server";
-import { TRPCError } from "@trpc/server";
-
-import { canManageRestaurant } from "~/server/auth/restaurantAccess";
 import type { SessionUser } from "~/server/auth/restaurantAccess";
+import { canManageRestaurant } from "~/server/auth/restaurantAccess";
 import type { db } from "~/server/db";
 import { asset, restaurant, restaurantImage } from "~/server/db/schema";
 

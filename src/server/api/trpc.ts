@@ -8,15 +8,13 @@
  */
 
 import { initTRPC, TRPCError } from "@trpc/server";
-import superjson from "superjson";
-import { z, ZodError } from "zod";
-
 import { eq } from "drizzle-orm";
+import superjson from "superjson";
+import { ZodError, z } from "zod";
 import { canManageRestaurant } from "~/server/auth/restaurantAccess";
-import { restaurant } from "~/server/db/schema";
-
 import { auth } from "~/server/better-auth";
 import { db } from "~/server/db";
+import { restaurant } from "~/server/db/schema";
 
 /**
  * 1. CONTEXT

@@ -105,9 +105,9 @@ describe("ownsRestaurantProcedure", () => {
 				restaurantOwnerId: "owner-1",
 			}),
 		);
-		await expect(
-			caller.mutate({ restaurantId: RESTAURANT_ID }),
-		).resolves.toBe("ok");
+		await expect(caller.mutate({ restaurantId: RESTAURANT_ID })).resolves.toBe(
+			"ok",
+		);
 	});
 
 	it("passes for an admin who does not own the restaurant", async () => {
@@ -117,8 +117,8 @@ describe("ownsRestaurantProcedure", () => {
 				restaurantOwnerId: "someone-else",
 			}),
 		);
-		await expect(
-			caller.mutate({ restaurantId: RESTAURANT_ID }),
-		).resolves.toBe("ok");
+		await expect(caller.mutate({ restaurantId: RESTAURANT_ID })).resolves.toBe(
+			"ok",
+		);
 	});
 });

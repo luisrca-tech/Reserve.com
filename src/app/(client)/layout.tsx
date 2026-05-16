@@ -13,8 +13,8 @@ export default async function ClientLayout({
 		redirect(
 			user.role === "restaurant_owner"
 				? user.hasRestaurant
-					? "/restaurant/overview"
-					: "/restaurant/onboarding"
+					? "/owner/overview"
+					: "/owner/onboarding"
 				: "/",
 		);
 	}

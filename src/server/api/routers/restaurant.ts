@@ -1,16 +1,15 @@
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-
-import { canManageRestaurant } from "~/server/auth/restaurantAccess";
 import {
 	createTRPCRouter,
 	ownsRestaurantProcedure,
 	protectedProcedure,
 	publicProcedure,
 } from "~/server/api/trpc";
-import { isPublicUploadMode } from "~/server/uploadthing/publicUploadMode";
+import { canManageRestaurant } from "~/server/auth/restaurantAccess";
 import { restaurant, restaurantImage } from "~/server/db/schema";
+import { isPublicUploadMode } from "~/server/uploadthing/publicUploadMode";
 import {
 	deleteRestaurantImageRecord,
 	deleteRestaurantUploadthingFiles,

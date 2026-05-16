@@ -2,10 +2,9 @@ import "server-only";
 
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
-
+import { z } from "zod";
 import { auth } from "~/server/better-auth";
 import { db } from "~/server/db";
-
 import {
 	ALLOWED_PROFILE_IMAGE_MIMES,
 	completeProfileUpload,
@@ -17,7 +16,6 @@ import {
 	resolveRestaurantUploadMetadata,
 } from "./restaurantImage";
 import { utapi } from "./utapi";
-import { z } from "zod";
 
 const f = createUploadthing();
 

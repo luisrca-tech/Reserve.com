@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 
 import { getServerSessionUser } from "~/features/auth/server";
 
-export default async function RestaurantLayout({
+/** Owner role gate: only restaurant owners may enter the owner area. */
+export default async function OwnerLayout({
 	children,
 }: {
 	children: React.ReactNode;

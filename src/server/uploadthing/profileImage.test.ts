@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { completeProfileUpload, resolveProfileUploadMetadata } from "./profileImage";
+import {
+	completeProfileUpload,
+	resolveProfileUploadMetadata,
+} from "./profileImage";
 
 vi.mock("./publicUploadMode", () => ({
 	isPublicUploadMode: () => false,

@@ -36,9 +36,7 @@ function makeDb(opts: {
 			const tx = {
 				select: vi.fn(() => ({
 					from: vi.fn(() => ({
-						where: vi.fn(async () => [
-							{ maxOrder: opts.maxSortOrder ?? null },
-						]),
+						where: vi.fn(async () => [{ maxOrder: opts.maxSortOrder ?? null }]),
 					})),
 				})),
 				insert: vi.fn(() => ({
