@@ -1,3 +1,4 @@
+import { restaurantRouter } from "~/server/api/routers/restaurant";
 import {
 	createCallerFactory,
 	createTRPCRouter,
@@ -11,6 +12,7 @@ import {
  */
 export const appRouter = createTRPCRouter({
 	health: publicProcedure.query(() => "ok"),
+	restaurant: restaurantRouter,
 });
 
 // export type definition of API

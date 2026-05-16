@@ -12,6 +12,7 @@ import superjson from "superjson";
 import { z, ZodError } from "zod";
 
 import { eq } from "drizzle-orm";
+import { canManageRestaurant } from "~/server/auth/restaurantAccess";
 import { restaurant } from "~/server/db/schema";
 
 import { auth } from "~/server/better-auth";
@@ -158,19 +159,20 @@ export const roleProcedure = (...roles: string[]) =>
  * Restaurant-ownership procedure
  *
  * Layered on top of `protectedProcedure`. Takes a `restaurantId` input and
- * passes only when the resolved session user owns that restaurant. The owner
- * id is read from the database, never supplied by the client. A missing
- * restaurant or a non-owner is rejected with `FORBIDDEN`.
+ * passes when the session user owns that restaurant or has the `admin` role.
+ * The owner id is read from the database, never supplied by the client. A
+ * missing restaurant or an unauthorized user is rejected with `FORBIDDEN`.
  */
 export const ownsRestaurantProcedure = protectedProcedure
 	.input(z.object({ restaurantId: z.string().uuid() }))
 	.use(async ({ ctx, input, next }) => {
-		const found = await ctx.db.query.restaurant.findFirst({
-			where: eq(restaurant.id, input.restaurantId),
-			columns: { ownerId: true },
-		});
+		const allowed = await canManageRestaurant(
+			ctx.db,
+			ctx.session.user,
+			input.restaurantId,
+		);
 
-		if (!found || found.ownerId !== ctx.session.user.id) {
+		if (!allowed) {
 			throw new TRPCError({ code: "FORBIDDEN" });
 		}
 

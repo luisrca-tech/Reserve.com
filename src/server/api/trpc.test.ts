@@ -8,7 +8,7 @@ import {
 	roleProcedure,
 } from "./trpc";
 
-type Role = "client" | "restaurant_owner";
+type Role = "client" | "restaurant_owner" | "admin";
 
 function makeCtx(opts: {
 	user?: { id: string; role: Role } | null;
@@ -103,6 +103,18 @@ describe("ownsRestaurantProcedure", () => {
 			makeCtx({
 				user: { id: "owner-1", role: "restaurant_owner" },
 				restaurantOwnerId: "owner-1",
+			}),
+		);
+		await expect(
+			caller.mutate({ restaurantId: RESTAURANT_ID }),
+		).resolves.toBe("ok");
+	});
+
+	it("passes for an admin who does not own the restaurant", async () => {
+		const caller = callOwns(
+			makeCtx({
+				user: { id: "admin-1", role: "admin" },
+				restaurantOwnerId: "someone-else",
 			}),
 		);
 		await expect(
