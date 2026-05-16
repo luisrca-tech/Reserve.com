@@ -15,6 +15,7 @@ export const asset = pgTable(
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
 		url: text("url").notNull(),
+		key: text("key"),
 		mimeType: text("mime_type").notNull(),
 		kind: assetKindEnum("kind").notNull(),
 		sizeBytes: integer("size_bytes"),

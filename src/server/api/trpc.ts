@@ -9,7 +9,10 @@
 
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
+
+import { eq } from "drizzle-orm";
+import { restaurant } from "~/server/db/schema";
 
 import { auth } from "~/server/better-auth";
 import { db } from "~/server/db";
@@ -131,4 +134,45 @@ export const protectedProcedure = t.procedure
 				session: { ...ctx.session, user: ctx.session.user },
 			},
 		});
+	});
+
+/**
+ * Role-restricted procedure factory
+ *
+ * Layered on top of `protectedProcedure`. Authorizes by `session.user.role`,
+ * which is derived from the resolved better-auth session — never from client
+ * input. Rejects an authenticated user whose role is not in `roles` with
+ * `FORBIDDEN`; unauthenticated requests are already rejected as `UNAUTHORIZED`
+ * by `protectedProcedure`.
+ */
+export const roleProcedure = (...roles: string[]) =>
+	protectedProcedure.use(({ ctx, next }) => {
+		const role = ctx.session.user.role;
+		if (!role || !roles.includes(role)) {
+			throw new TRPCError({ code: "FORBIDDEN" });
+		}
+		return next();
+	});
+
+/**
+ * Restaurant-ownership procedure
+ *
+ * Layered on top of `protectedProcedure`. Takes a `restaurantId` input and
+ * passes only when the resolved session user owns that restaurant. The owner
+ * id is read from the database, never supplied by the client. A missing
+ * restaurant or a non-owner is rejected with `FORBIDDEN`.
+ */
+export const ownsRestaurantProcedure = protectedProcedure
+	.input(z.object({ restaurantId: z.string().uuid() }))
+	.use(async ({ ctx, input, next }) => {
+		const found = await ctx.db.query.restaurant.findFirst({
+			where: eq(restaurant.id, input.restaurantId),
+			columns: { ownerId: true },
+		});
+
+		if (!found || found.ownerId !== ctx.session.user.id) {
+			throw new TRPCError({ code: "FORBIDDEN" });
+		}
+
+		return next();
 	});
