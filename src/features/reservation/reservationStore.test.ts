@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { AvailabilityContext } from "./Availability";
+import type { AvailabilityContext } from "~/server/domain/reservation";
 import { createReservationStore } from "./reservationStore";
 import type { Reservation } from "./types";
 

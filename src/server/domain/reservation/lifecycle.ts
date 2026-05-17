@@ -1,4 +1,4 @@
-import type { Reservation } from "./types";
+import type { Reservation } from "~/server/db/schema/types";
 
 /** Tunable lifecycle durations; overridable to short values for the demo. */
 export interface LifecycleConfig {

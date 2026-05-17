@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { Button } from "~/components/ui/Button";
 import type { RestaurantView } from "~/features/restaurant/types";
 import { useSessionState } from "~/features/session/SessionContext";
-import { createAvailability } from "../Availability";
+import { createAvailability } from "~/server/domain/reservation";
 import { bookingCopy } from "../copy";
 import { useReservationStore } from "./ReservationStoreContext";
 

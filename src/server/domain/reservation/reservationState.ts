@@ -1,3 +1,4 @@
+import type { Reservation } from "~/server/db/schema/types";
 import { type AvailabilityContext, createAvailability } from "./Availability";
 import {
 	DEFAULT_LIFECYCLE_CONFIG,
@@ -5,7 +6,6 @@ import {
 	type LifecycleTransition,
 	nextStates,
 } from "./lifecycle";
-import type { Reservation } from "./types";
 
 export interface ReservationStateInput {
 	reservations: Reservation[];

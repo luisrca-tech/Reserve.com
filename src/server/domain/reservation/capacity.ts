@@ -1,5 +1,7 @@
-import type { RestaurantAvailability } from "~/server/db/schema/types";
-import type { Reservation } from "./types";
+import type {
+	Reservation,
+	RestaurantAvailability,
+} from "~/server/db/schema/types";
 
 /** Statuses that hold a table and therefore count against slot capacity. */
 export const ACTIVE_STATUSES = ["pending", "confirmed"] as const;

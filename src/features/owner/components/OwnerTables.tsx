@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
 import { Label } from "~/components/ui/Label";
-import { createAvailability } from "~/features/reservation/Availability";
+import { createAvailability } from "~/server/domain/reservation";
 import { ownerCopy } from "../copy";
 import { useOwnerStore } from "../OwnerStoreContext";
 

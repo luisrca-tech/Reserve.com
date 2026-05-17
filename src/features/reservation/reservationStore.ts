@@ -1,10 +1,11 @@
-import type { AvailabilityContext } from "./Availability";
-import { type LifecycleConfig, validate } from "./lifecycle";
-import { mockReservations } from "./mock/reservations";
 import {
+	type AvailabilityContext,
+	type LifecycleConfig,
 	type ReservationStateResult,
 	reservationState,
-} from "./reservationState";
+	validate,
+} from "~/server/domain/reservation";
+import { mockReservations } from "./mock/reservations";
 import type { Reservation } from "./types";
 
 export interface NewReservationInput {

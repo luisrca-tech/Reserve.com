@@ -1,16 +1,13 @@
 import { describe, expect, it } from "vitest";
-
+import type { Reservation } from "~/server/db/schema/types";
 import type { AvailabilityContext } from "./Availability";
 import { DEFAULT_LIFECYCLE_CONFIG } from "./lifecycle";
 import { reservationState } from "./reservationState";
-import type { Reservation } from "./types";
 
 const T0 = new Date("2026-06-02T18:00:00.000Z").getTime();
 const { expiryMs, reminderMs } = DEFAULT_LIFECYCLE_CONFIG;
 
-function resv(
-	over: Partial<Reservation> & { id: string },
-): Reservation {
+function resv(over: Partial<Reservation> & { id: string }): Reservation {
 	const startTime = over.startTime ?? new Date(T0 + 6 * 60 * 60 * 1000);
 	return {
 		userId: "u1",
