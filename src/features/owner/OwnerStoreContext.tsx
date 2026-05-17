@@ -13,8 +13,7 @@ import {
 import { toast } from "sonner";
 
 import { useAuth } from "~/features/auth/MockAuthContext";
-import { mockReservations } from "~/features/reservation/mock/reservations";
-import { reservationState } from "~/features/reservation/reservationState";
+import { useReservationStoreSnapshot } from "~/features/reservation/components/ReservationStoreContext";
 import type { MockReservation } from "~/features/reservation/types";
 import type { RestaurantView } from "~/features/restaurant/types";
 import { resolveOwnerRestaurant } from "./mappers";
@@ -74,10 +73,12 @@ export function OwnerStoreProvider({
 	const { user } = useAuth();
 	const ownerId = user?.id ?? "";
 
+	const store = useReservationStoreSnapshot();
 	const [restaurant, setRestaurant] = useState<RestaurantView>(() =>
 		resolveOwnerRestaurant(ownerId),
 	);
-	const [reservations, setReservations] = useState<MockReservation[]>([]);
+	const ownerScope = store.owner(restaurant.id);
+	const reservations = ownerScope.list();
 	const managerRef = useRef(createNotificationManager(sonnerSink));
 	const manager = managerRef.current;
 	const notifications = useSyncExternalStore(
@@ -86,28 +87,25 @@ export function OwnerStoreProvider({
 		manager.getHistory,
 	);
 
-	// Resolve the managed restaurant + seed reservations once the mock
-	// session hydrates from the cookie.
+	// Resolve the managed restaurant + seed demo rows into the shared store
+	// once the mock session hydrates from the cookie. Shared client rows are
+	// already in the store's initial set; only owner-demo rows are injected.
 	useEffect(() => {
 		if (!ownerId) return;
 		const resolved = resolveOwnerRestaurant(ownerId);
 		setRestaurant(resolved);
-		const now = new Date();
-		const shared = mockReservations.filter(
-			(r) => r.restaurantId === resolved.id,
-		);
-		setReservations([...buildOwnerSeed(resolved, now), ...shared]);
-	}, [ownerId]);
+		store.seedOwner(buildOwnerSeed(resolved, new Date()));
+	}, [ownerId, store]);
 
 	// Translate domain transitions/alerts emitted by the pure reducer into
 	// owner-facing notification events. No rule logic and no notification
 	// plumbing here — the manager owns dedup, tone, and message construction.
 	const runTick = useCallback(() => {
 		const now = new Date();
-		setReservations((prev) => {
-			const { nextReservations, transitions, alerts } = reservationState({
-				reservations: prev,
-				restaurant: {
+		const { nextReservations, transitions, alerts } = store
+			.owner(restaurant.id)
+			.applyTick(
+				{
 					restaurantId: restaurant.id,
 					tableCount: restaurant.tableCount,
 					autoConfirmEnabled: restaurant.autoConfirmEnabled,
@@ -115,50 +113,47 @@ export function OwnerStoreProvider({
 					hoursByWeekday: restaurant.hoursByWeekday,
 				},
 				now,
-			});
+			);
 
-			for (const transition of transitions) {
-				const target = prev.find((r) => r.id === transition.id);
+		for (const transition of transitions) {
+			const target = nextReservations.find((r) => r.id === transition.id);
+			if (!target) continue;
+			const guest = reservationGuest(target.userId);
+			if (transition.to === "expired") {
+				manager.notify("expired", target.id, {
+					at: now,
+					guestName: guest.name,
+					time: timeLabel(target.startTime),
+				});
+			} else if (transition.to === "confirmed") {
+				manager.notify("auto", target.id, {
+					at: now,
+					guestName: guest.name,
+				});
+			}
+		}
+
+		for (const alert of alerts) {
+			if (alert.kind === "reminder") {
+				const target = nextReservations.find(
+					(r) => r.id === alert.reservationId,
+				);
 				if (!target) continue;
 				const guest = reservationGuest(target.userId);
-				if (transition.to === "expired") {
-					manager.notify("expired", target.id, {
-						at: now,
-						guestName: guest.name,
-						time: timeLabel(target.startTime),
-					});
-				} else if (transition.to === "confirmed") {
-					manager.notify("auto", target.id, {
-						at: now,
-						guestName: guest.name,
-					});
-				}
+				manager.notify("reminder", alert.reservationId, {
+					at: now,
+					guestName: guest.name,
+					time: timeLabel(target.startTime),
+				});
+			} else {
+				manager.notify("lowTables", String(alert.slotMs), {
+					at: now,
+					time: timeLabel(alert.startTime),
+					remaining: alert.remaining,
+				});
 			}
-
-			for (const alert of alerts) {
-				if (alert.kind === "reminder") {
-					const target = nextReservations.find(
-						(r) => r.id === alert.reservationId,
-					);
-					if (!target) continue;
-					const guest = reservationGuest(target.userId);
-					manager.notify("reminder", alert.reservationId, {
-						at: now,
-						guestName: guest.name,
-						time: timeLabel(target.startTime),
-					});
-				} else {
-					manager.notify("lowTables", String(alert.slotMs), {
-						at: now,
-						time: timeLabel(alert.startTime),
-						remaining: alert.remaining,
-					});
-				}
-			}
-
-			return nextReservations;
-		});
-	}, [restaurant, manager]);
+		}
+	}, [restaurant, manager, store]);
 
 	// In-app clock: a real interval drives the pure lifecycle module.
 	useEffect(() => {
@@ -167,16 +162,12 @@ export function OwnerStoreProvider({
 		return () => clearInterval(handle);
 	}, [runTick]);
 
-	const validateReservation = useCallback((id: string) => {
-		const now = new Date();
-		setReservations((prev) =>
-			prev.map((r) =>
-				r.id === id && r.status === "pending"
-					? { ...r, status: "confirmed", validatedAt: now }
-					: r,
-			),
-		);
-	}, []);
+	const validateReservation = useCallback(
+		(id: string) => {
+			store.owner(restaurant.id).validateReservation(id, new Date());
+		},
+		[store, restaurant.id],
+	);
 
 	const setAutoConfirm = useCallback((enabled: boolean) => {
 		setRestaurant((prev) => ({ ...prev, autoConfirmEnabled: enabled }));

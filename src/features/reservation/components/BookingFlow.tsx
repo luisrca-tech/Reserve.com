@@ -43,7 +43,8 @@ function buildMonthGrid(viewYear: number, viewMonth: number): (Date | null)[] {
 
 export function BookingFlow({ restaurant }: { restaurant: RestaurantView }) {
 	const { user } = useAuth();
-	const { reservations, addReservation } = useReservationStore();
+	const { restaurantReservations, addReservation } = useReservationStore();
+	const reservations = restaurantReservations(restaurant.id);
 
 	const today = useMemo(startOfTodayUtc, []);
 	const [viewYear, setViewYear] = useState(today.getUTCFullYear());

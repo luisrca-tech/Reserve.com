@@ -6,10 +6,9 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
-import { useAuth } from "~/features/auth/MockAuthContext";
 import { bookingCopy, historyCopy, statusMeta } from "../copy";
 import { toReservationView } from "../mappers";
-import type { MockReservation, ReservationView } from "../types";
+import type { ReservationView } from "../types";
 import { useReservationStore } from "./ReservationStoreContext";
 
 const ACTIVE_STATUSES: ReservationView["status"][] = ["pending", "confirmed"];
@@ -32,21 +31,17 @@ function timeLabel(date: Date): string {
 }
 
 export function ReservationHistory() {
-	const { user } = useAuth();
 	const { reservations, cancelReservation } = useReservationStore();
 
 	const { active, previous } = useMemo(() => {
-		const mine = user
-			? reservations.filter((r: MockReservation) => r.userId === user.id)
-			: [];
-		const views = mine
+		const views = reservations
 			.map(toReservationView)
 			.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
 		return {
 			active: views.filter((v) => ACTIVE_STATUSES.includes(v.status)),
 			previous: views.filter((v) => !ACTIVE_STATUSES.includes(v.status)),
 		};
-	}, [reservations, user]);
+	}, [reservations]);
 
 	function handleCancel(id: string) {
 		cancelReservation(id);

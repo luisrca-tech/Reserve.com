@@ -1,98 +1,68 @@
 "use client";
 
-import {
-	createContext,
-	useCallback,
-	useContext,
-	useMemo,
-	useState,
-} from "react";
+import { createContext, useContext, useRef, useSyncExternalStore } from "react";
 
-import { mockReservations } from "../mock/reservations";
+import { useAuth } from "~/features/auth/MockAuthContext";
+import {
+	createReservationStore,
+	type NewReservationInput,
+	type ReservationStore,
+} from "../reservationStore";
 import type { MockReservation } from "../types";
 
-interface NewReservationInput {
-	userId: string;
-	restaurantId: string;
-	startTime: Date;
-	partySize: number;
-	tableCount: number;
-	/** When the restaurant auto-confirms, the booking lands confirmed. */
-	autoConfirm: boolean;
-}
+const ReservationStoreContext = createContext<ReservationStore | null>(null);
 
-interface ReservationStoreValue {
-	reservations: MockReservation[];
-	addReservation: (input: NewReservationInput) => MockReservation;
-	/** Cancels a reservation (→ cancelled), freeing its slot capacity. */
-	cancelReservation: (id: string) => void;
-}
-
-const ReservationStoreContext = createContext<ReservationStoreValue | null>(
-	null,
-);
-
-let sequence = 0;
-
+/**
+ * One reservation set for client and owner. Both shells mount this provider;
+ * the client hook below and `OwnerStoreContext` read the same store, so a
+ * client-created reservation shows up in the owner's list without a reload.
+ */
 export function ReservationStoreProvider({
 	children,
 }: {
 	children: React.ReactNode;
 }) {
-	const [reservations, setReservations] =
-		useState<MockReservation[]>(mockReservations);
-
-	const addReservation = useCallback((input: NewReservationInput) => {
-		const now = new Date();
-		const endTime = new Date(input.startTime.getTime() + 60 * 60 * 1000);
-		const status = input.autoConfirm ? "confirmed" : "pending";
-		sequence += 1;
-		const reservation: MockReservation = {
-			id: `resv_new_${sequence}`,
-			userId: input.userId,
-			restaurantId: input.restaurantId,
-			startTime: input.startTime,
-			endTime,
-			status,
-			validatedAt: input.autoConfirm ? now : null,
-			cancelledAt: null,
-			createdAt: now,
-			partySize: input.partySize,
-			tableCount: input.tableCount,
-		};
-		setReservations((prev) => [reservation, ...prev]);
-		return reservation;
-	}, []);
-
-	const cancelReservation = useCallback((id: string) => {
-		const now = new Date();
-		setReservations((prev) =>
-			prev.map((r) =>
-				r.id === id && r.status !== "cancelled"
-					? { ...r, status: "cancelled", cancelledAt: now }
-					: r,
-			),
-		);
-	}, []);
-
-	const value = useMemo<ReservationStoreValue>(
-		() => ({ reservations, addReservation, cancelReservation }),
-		[reservations, addReservation, cancelReservation],
-	);
+	const storeRef = useRef<ReservationStore>(undefined);
+	if (!storeRef.current) storeRef.current = createReservationStore();
 
 	return (
-		<ReservationStoreContext.Provider value={value}>
+		<ReservationStoreContext.Provider value={storeRef.current}>
 			{children}
 		</ReservationStoreContext.Provider>
 	);
 }
 
-export function useReservationStore(): ReservationStoreValue {
-	const ctx = useContext(ReservationStoreContext);
-	if (!ctx) {
+/** Raw store access for the owner provider. Subscribes the caller to changes. */
+export function useReservationStoreSnapshot(): ReservationStore {
+	const store = useContext(ReservationStoreContext);
+	if (!store) {
 		throw new Error(
-			"useReservationStore must be used within a ReservationStoreProvider",
+			"Reservation store hooks must be used within a ReservationStoreProvider",
 		);
 	}
-	return ctx;
+	useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+	return store;
+}
+
+interface ClientReservationStore {
+	/** The signed-in user's own reservations (history view). */
+	reservations: MockReservation[];
+	/** Restaurant-wide rows for booking-capacity reads only. */
+	restaurantReservations: (restaurantId: string) => MockReservation[];
+	addReservation: (input: NewReservationInput) => MockReservation;
+	cancelReservation: (id: string) => void;
+}
+
+export function useReservationStore(): ClientReservationStore {
+	const store = useReservationStoreSnapshot();
+	const { user } = useAuth();
+	const scope = store.client(user?.id ?? "");
+
+	return {
+		reservations: scope.list(),
+		restaurantReservations: (restaurantId) =>
+			scope.restaurantReservations(restaurantId),
+		addReservation: (input) => scope.addReservation(input, new Date()),
+		cancelReservation: (id) => scope.cancelReservation(id, new Date()),
+	};
 }

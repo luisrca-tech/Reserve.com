@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 import { useAuth } from "~/features/auth/MockAuthContext";
 import { ProfileDialog } from "~/features/profile/components/ProfileDialog";
+import { ReservationStoreProvider } from "~/features/reservation/components/ReservationStoreContext";
 import { ownerCopy } from "../copy";
 import { OwnerStoreProvider } from "../OwnerStoreContext";
 import { NotificationBell } from "./NotificationBell";
@@ -34,9 +35,11 @@ const NAV = [
 
 export function OwnerShell({ children }: { children: React.ReactNode }) {
 	return (
-		<OwnerStoreProvider>
-			<OwnerLayout>{children}</OwnerLayout>
-		</OwnerStoreProvider>
+		<ReservationStoreProvider>
+			<OwnerStoreProvider>
+				<OwnerLayout>{children}</OwnerLayout>
+			</OwnerStoreProvider>
+		</ReservationStoreProvider>
 	);
 }
 
