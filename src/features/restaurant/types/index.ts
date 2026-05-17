@@ -34,6 +34,8 @@ export interface RestaurantView {
 	lowTableThreshold: number;
 	images: string[];
 	menuUrl: string | null;
+	/** Kind of the menu asset, so the detail page renders PDF vs image. */
+	menuKind: "image" | "pdf" | null;
 	/** weekday (0–6) → sorted list of open whole hours (0–23). */
 	hoursByWeekday: Record<number, number[]>;
 }

@@ -1,84 +1,65 @@
 "use client";
 
-import {
-	CalendarDays,
-	ChevronLeft,
-	ChevronRight,
-	Minus,
-	Plus,
-} from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { CalendarDays, Minus, Plus } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
+import { Calendar } from "~/components/ui/Calendar";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "~/components/ui/Popover";
 import type { RestaurantView } from "~/features/restaurant/types";
 import { useSessionState } from "~/features/session/SessionContext";
 import { createAvailability } from "~/server/domain/reservation";
+import { api } from "~/trpc/react";
 import { bookingCopy } from "../copy";
 import { useReservationStore } from "./ReservationStoreContext";
 
-/** UTC midnight for a calendar cell — keeps weekday math consistent. */
-function utcDay(year: number, month: number, day: number): Date {
-	return new Date(Date.UTC(year, month, day));
+/** Local-midnight → UTC-midnight, so weekday/slot math stays UTC-consistent. */
+function toUtcDay(date: Date): Date {
+	return new Date(
+		Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+	);
 }
 
-function startOfTodayUtc(): Date {
+function startOfToday(): Date {
 	const now = new Date();
-	return utcDay(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-}
-
-function buildMonthGrid(viewYear: number, viewMonth: number): (Date | null)[] {
-	const first = utcDay(viewYear, viewMonth, 1);
-	const lead = first.getUTCDay();
-	const daysInMonth = new Date(
-		Date.UTC(viewYear, viewMonth + 1, 0),
-	).getUTCDate();
-	const cells: (Date | null)[] = [];
-	for (let i = 0; i < lead; i++) cells.push(null);
-	for (let d = 1; d <= daysInMonth; d++) {
-		cells.push(utcDay(viewYear, viewMonth, d));
-	}
-	return cells;
+	return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
 export function BookingFlow({ restaurant }: { restaurant: RestaurantView }) {
 	const { user } = useSessionState();
-	const { restaurantReservations, addReservation } = useReservationStore();
-	const reservations = restaurantReservations(restaurant.id);
+	const { addReservation } = useReservationStore();
+	const [{ context, reservations }] =
+		api.restaurant.availability.useSuspenseQuery({
+			restaurantId: restaurant.id,
+		});
 
-	const today = useMemo(startOfTodayUtc, []);
-	const [viewYear, setViewYear] = useState(today.getUTCFullYear());
-	const [viewMonth, setViewMonth] = useState(today.getUTCMonth());
+	const today = useMemo(startOfToday, []);
 	const [calendarOpen, setCalendarOpen] = useState(false);
 	const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 	const [selectedHour, setSelectedHour] = useState<number | null>(null);
 	const [partySize, setPartySize] = useState(2);
 	const [tableCount, setTableCount] = useState(1);
-	const calendarRef = useRef<HTMLDivElement>(null);
-
-	const grid = useMemo(
-		() => buildMonthGrid(viewYear, viewMonth),
-		[viewYear, viewMonth],
-	);
 
 	const openHours = selectedDate
 		? (restaurant.hoursByWeekday[selectedDate.getUTCDay()] ?? [])
 		: [];
 
-	function isDayOpen(date: Date): boolean {
-		return (restaurant.hoursByWeekday[date.getUTCDay()]?.length ?? 0) > 0;
+	/** Closed (no open hours) or in the past — unselectable in the calendar. */
+	function isDayDisabled(date: Date): boolean {
+		if (date.getTime() < today.getTime()) return true;
+		return (restaurant.hoursByWeekday[date.getDay()]?.length ?? 0) === 0;
 	}
 
-	function selectDate(date: Date) {
-		setSelectedDate(date);
+	function selectDate(date: Date | undefined) {
+		if (!date) return;
+		setSelectedDate(toUtcDay(date));
 		setSelectedHour(null);
 		setCalendarOpen(false);
-	}
-
-	function shiftMonth(delta: number) {
-		const next = new Date(Date.UTC(viewYear, viewMonth + delta, 1));
-		setViewYear(next.getUTCFullYear());
-		setViewMonth(next.getUTCMonth());
 	}
 
 	function slotStart(hour: number): Date {
@@ -89,15 +70,8 @@ export function BookingFlow({ restaurant }: { restaurant: RestaurantView }) {
 	}
 
 	const availability = useMemo(
-		() =>
-			createAvailability(reservations, {
-				restaurantId: restaurant.id,
-				tableCount: restaurant.tableCount,
-				autoConfirmEnabled: restaurant.autoConfirmEnabled,
-				lowTableThreshold: restaurant.lowTableThreshold,
-				hoursByWeekday: restaurant.hoursByWeekday,
-			}),
-		[reservations, restaurant],
+		() => createAvailability(reservations, context),
+		[reservations, context],
 	);
 
 	const selectedStart =
@@ -150,76 +124,28 @@ export function BookingFlow({ restaurant }: { restaurant: RestaurantView }) {
 				<div className="mb-2 text-[0.85rem] text-muted">
 					{bookingCopy.stepDate}
 				</div>
-				<div className="relative" ref={calendarRef}>
-					<button
-						className="flex w-full items-center justify-between rounded-[var(--radius-sm)] border border-[var(--border)] bg-surface2 px-4 py-3 text-[0.9rem] text-text transition-colors hover:border-accent"
-						onClick={() => setCalendarOpen((o) => !o)}
-						type="button"
-					>
-						<span className={selectedDate ? "text-text" : "text-muted"}>
-							{dateLabel}
-						</span>
-						<CalendarDays className="text-muted" size={18} />
-					</button>
-
-					{calendarOpen && (
-						<div className="absolute z-20 mt-2 w-[320px] rounded-[var(--radius)] border border-[var(--border)] bg-surface p-4 shadow-xl">
-							<div className="mb-3 flex items-center justify-between">
-								<button
-									className="rounded-md p-1 text-muted transition-colors hover:bg-surface2 hover:text-text"
-									onClick={() => shiftMonth(-1)}
-									type="button"
-								>
-									<ChevronLeft size={18} />
-								</button>
-								<span className="font-medium text-[0.9rem] text-text">
-									{bookingCopy.months[viewMonth]} {viewYear}
-								</span>
-								<button
-									className="rounded-md p-1 text-muted transition-colors hover:bg-surface2 hover:text-text"
-									onClick={() => shiftMonth(1)}
-									type="button"
-								>
-									<ChevronRight size={18} />
-								</button>
-							</div>
-							<div className="mb-1 grid grid-cols-7 gap-1 text-center text-[0.7rem] text-muted">
-								{bookingCopy.weekdays.map((w) => (
-									<div key={w}>{w}</div>
-								))}
-							</div>
-							<div className="grid grid-cols-7 gap-1">
-								{grid.map((date, i) => {
-									if (!date) {
-										// biome-ignore lint/suspicious/noArrayIndexKey: fixed-size leading blanks
-										return <div key={`blank_${i}`} />;
-									}
-									const past = date.getTime() < today.getTime();
-									const open = isDayOpen(date);
-									const disabled = past || !open;
-									const selected = selectedDate?.getTime() === date.getTime();
-									return (
-										<button
-											className={`aspect-square rounded-md text-[0.8rem] transition-colors ${
-												selected
-													? "bg-accent text-white"
-													: disabled
-														? "cursor-not-allowed text-muted/40"
-														: "text-text hover:bg-surface2"
-											}`}
-											disabled={disabled}
-											key={date.toISOString()}
-											onClick={() => selectDate(date)}
-											type="button"
-										>
-											{date.getUTCDate()}
-										</button>
-									);
-								})}
-							</div>
-						</div>
-					)}
-				</div>
+				<Popover onOpenChange={setCalendarOpen} open={calendarOpen}>
+					<PopoverTrigger asChild>
+						<button
+							className="flex w-full items-center justify-between rounded-[var(--radius-sm)] border border-[var(--border)] bg-surface2 px-4 py-3 text-[0.9rem] text-text transition-colors hover:border-accent"
+							type="button"
+						>
+							<span className={selectedDate ? "text-text" : "text-muted"}>
+								{dateLabel}
+							</span>
+							<CalendarDays className="text-muted" size={18} />
+						</button>
+					</PopoverTrigger>
+					<PopoverContent className="w-auto">
+						<Calendar
+							disabled={isDayDisabled}
+							mode="single"
+							onSelect={selectDate}
+							selected={selectedDate ?? undefined}
+							startMonth={today}
+						/>
+					</PopoverContent>
+				</Popover>
 			</div>
 
 			{/* Step 2 — hour */}

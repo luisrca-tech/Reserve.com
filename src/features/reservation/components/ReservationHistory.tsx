@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
+import { mockRestaurantViewsById } from "~/features/restaurant/mock/restaurants";
 import { bookingCopy, historyCopy, statusMeta } from "../copy";
 import { toReservationView } from "../mappers";
 import type { ReservationView } from "../types";
@@ -35,7 +36,16 @@ export function ReservationHistory() {
 
 	const { active, previous } = useMemo(() => {
 		const views = reservations
-			.map(toReservationView)
+			.map((reservation) => {
+				const restaurant = mockRestaurantViewsById[reservation.restaurantId];
+				return toReservationView(
+					reservation,
+					restaurant && {
+						name: restaurant.name,
+						image: restaurant.images[0] ?? null,
+					},
+				);
+			})
 			.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
 		return {
 			active: views.filter((v) => ACTIVE_STATUSES.includes(v.status)),

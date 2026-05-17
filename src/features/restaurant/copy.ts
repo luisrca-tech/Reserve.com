@@ -100,4 +100,6 @@ export const detailCopy = {
 	notFoundHint: "Esse restaurante não está mais disponível.",
 	bookCta: "Reservar mesa",
 	bookComingSoon: "O fluxo de reserva chega na próxima fase.",
+	menuLabel: "📋 Cardápio",
+	menuOpen: "Abrir cardápio em PDF",
 } as const;

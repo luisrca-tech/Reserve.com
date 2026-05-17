@@ -1,4 +1,26 @@
+import type { RestaurantAvailability } from "~/server/db/schema/types";
 import type { RestaurantRecord, RestaurantView } from "./types";
+
+/**
+ * Collapse `(weekday,hour)` availability rows into the
+ * `weekday → sorted open hours` map both the view model and the
+ * server-side availability query render from (single definition,
+ * client and server cannot drift).
+ */
+export function collapseHoursByWeekday(
+	availability: Pick<RestaurantAvailability, "weekday" | "hour">[],
+): Record<number, number[]> {
+	const hoursByWeekday: Record<number, number[]> = {};
+	for (const row of availability) {
+		const hours = hoursByWeekday[row.weekday] ?? [];
+		hours.push(row.hour);
+		hoursByWeekday[row.weekday] = hours;
+	}
+	for (const hours of Object.values(hoursByWeekday)) {
+		hours.sort((a, b) => a - b);
+	}
+	return hoursByWeekday;
+}
 
 const WEEKDAY_LABELS = [
 	"Dom",
@@ -68,15 +90,7 @@ export function toRestaurantView(record: RestaurantRecord): RestaurantView {
 		.map((img) => assetById.get(img.assetId)?.url)
 		.filter((url): url is string => Boolean(url));
 
-	const hoursByWeekday: Record<number, number[]> = {};
-	for (const row of availability) {
-		const hours = hoursByWeekday[row.weekday] ?? [];
-		hours.push(row.hour);
-		hoursByWeekday[row.weekday] = hours;
-	}
-	for (const hours of Object.values(hoursByWeekday)) {
-		hours.sort((a, b) => a - b);
-	}
+	const hoursByWeekday = collapseHoursByWeekday(availability);
 
 	return {
 		id: restaurant.id,
@@ -93,6 +107,7 @@ export function toRestaurantView(record: RestaurantRecord): RestaurantView {
 		lowTableThreshold: restaurant.lowTableThreshold,
 		images: orderedImages,
 		menuUrl: menuAsset?.url ?? null,
+		menuKind: menuAsset?.kind ?? null,
 		hoursByWeekday,
 	};
 }

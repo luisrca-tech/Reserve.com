@@ -102,6 +102,31 @@ export function RestaurantDetail({
 								</div>
 							))}
 						</div>
+
+						{restaurant.menuUrl && (
+							<div className="mt-6">
+								<div className="mb-2 text-[0.78rem] text-muted">
+									{detailCopy.menuLabel}
+								</div>
+								{restaurant.menuKind === "pdf" ? (
+									<a
+										className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-surface2 px-4 py-3 text-[0.9rem] text-text transition-colors hover:border-accent"
+										href={restaurant.menuUrl}
+										rel="noreferrer"
+										target="_blank"
+									>
+										{detailCopy.menuOpen}
+									</a>
+								) : (
+									// biome-ignore lint/performance/noImgElement: remote menu asset
+									<img
+										alt={detailCopy.menuLabel}
+										className="w-full rounded-[var(--radius-sm)] border border-[var(--border)]"
+										src={restaurant.menuUrl}
+									/>
+								)}
+							</div>
+						)}
 					</div>
 
 					<BookingFlow restaurant={restaurant} />

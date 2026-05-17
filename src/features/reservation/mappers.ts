@@ -1,16 +1,25 @@
-import { mockRestaurantViewsById } from "~/features/restaurant/mock/restaurants";
 import type { Reservation, ReservationView } from "./types";
 
-/** Schema → view mapper: joins a reservation row to its restaurant. */
+/** The restaurant facts a reservation view needs, supplied by the caller. */
+export interface ReservationRestaurantRef {
+	name: string;
+	image: string | null;
+}
+
+/**
+ * Schema → view mapper. The restaurant reference is passed in (resolved by
+ * the caller from its own source) so the mapper stays pure and free of any
+ * restaurant data dependency.
+ */
 export function toReservationView(
 	reservation: Reservation,
+	restaurant?: ReservationRestaurantRef,
 ): ReservationView {
-	const restaurant = mockRestaurantViewsById[reservation.restaurantId];
 	return {
 		id: reservation.id,
 		restaurantId: reservation.restaurantId,
 		restaurantName: restaurant?.name ?? "Restaurante",
-		restaurantImage: restaurant?.images[0] ?? null,
+		restaurantImage: restaurant?.image ?? null,
 		startTime: reservation.startTime,
 		endTime: reservation.endTime,
 		status: reservation.status,

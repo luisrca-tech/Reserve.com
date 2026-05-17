@@ -1,4 +1,5 @@
 import { mockUsers } from "~/features/auth/mock/users";
+import { mockRestaurantViewsById } from "~/features/restaurant/mock/restaurants";
 import { toReservationView } from "../mappers";
 import type { Reservation } from "../types";
 
@@ -57,4 +58,13 @@ export const mockReservations: Reservation[] = [
 	),
 ];
 
-export const mockReservationViews = mockReservations.map(toReservationView);
+export const mockReservationViews = mockReservations.map((reservation) => {
+	const restaurant = mockRestaurantViewsById[reservation.restaurantId];
+	return toReservationView(
+		reservation,
+		restaurant && {
+			name: restaurant.name,
+			image: restaurant.images[0] ?? null,
+		},
+	);
+});
