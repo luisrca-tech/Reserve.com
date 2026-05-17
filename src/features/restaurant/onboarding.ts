@@ -1,7 +1,10 @@
-import type {
-	Category,
-	RestaurantAvailability,
-} from "~/server/db/schema/types";
+import type { RestaurantAvailability } from "~/server/db/schema/types";
+
+/** Minimal category shape both the mock and `category.list` satisfy. */
+export interface CategoryOption {
+	id: string;
+	name: string;
+}
 
 /** One open weekday with its whole-hour opening/closing bounds. */
 export interface WeekdaySchedule {
@@ -39,7 +42,7 @@ export type OnboardingError =
 
 export type CategoryResolution =
 	| { kind: "empty" }
-	| { kind: "existing"; category: Category }
+	| { kind: "existing"; category: CategoryOption }
 	| { kind: "new"; name: string };
 
 /** Trim and collapse internal whitespace so duplicates are caught reliably. */
@@ -53,7 +56,7 @@ export function normalizeCategoryName(name: string): string {
  */
 export function resolveCategory(
 	query: string,
-	categories: Category[],
+	categories: CategoryOption[],
 ): CategoryResolution {
 	const normalized = normalizeCategoryName(query);
 	if (normalized === "") return { kind: "empty" };

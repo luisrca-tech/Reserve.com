@@ -1,5 +1,9 @@
 import { createTRPCRouter } from "~/server/api/trpc";
-import { deleteRestaurant, deleteRestaurantImage } from "./mutations";
+import {
+	createRestaurant,
+	deleteRestaurant,
+	deleteRestaurantImage,
+} from "./mutations";
 import {
 	listGalleryImages,
 	listRestaurants,
@@ -13,6 +17,7 @@ import {
  */
 export const restaurantRouter = createTRPCRouter({
 	list: listRestaurants,
+	create: createRestaurant,
 	byId: restaurantById,
 	availability: restaurantAvailability,
 	listGalleryImages,

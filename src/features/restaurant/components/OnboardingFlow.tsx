@@ -10,20 +10,27 @@ import {
 	Upload,
 	X,
 } from "lucide-react";
+import type { FieldError } from "react-hook-form";
 
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
 import { Label } from "~/components/ui/Label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "~/components/ui/Select";
 import { Textarea } from "~/components/ui/Textarea";
 import { onboardingCopy as t } from "../copy";
-import type { DaySchedule } from "../onboarding";
 import { useOnboardingForm } from "../useOnboardingForm";
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
 export function OnboardingFlow() {
 	const f = useOnboardingForm();
-	const { step, has, resolution, matches } = f;
+	const { step, errors, register, resolution, matches } = f;
 
 	return (
 		<div className="mx-auto w-full max-w-2xl px-4 py-10">
@@ -66,52 +73,52 @@ export function OnboardingFlow() {
 						<h2 className="font-semibold font-serif text-[1.3rem] text-text">
 							{t.basicsTitle}
 						</h2>
-						<Field error={has("name")}>
+						<div>
 							<Label htmlFor="ob-name">{t.nameLabel}</Label>
 							<Input
 								id="ob-name"
-								onChange={(e) => f.setName(e.target.value)}
 								placeholder={t.namePlaceholder}
-								value={f.name}
+								{...register("name")}
 							/>
-						</Field>
-						<Field error={has("corporateEmail")}>
+							<FieldMessage error={errors.name} />
+						</div>
+						<div>
 							<Label htmlFor="ob-email">{t.corporateEmailLabel}</Label>
 							<Input
 								id="ob-email"
-								onChange={(e) => f.setCorporateEmail(e.target.value)}
 								placeholder={t.corporateEmailPlaceholder}
 								type="email"
-								value={f.corporateEmail}
+								{...register("corporateEmail")}
 							/>
-						</Field>
-						<Field error={has("phone")}>
+							<FieldMessage error={errors.corporateEmail} />
+						</div>
+						<div>
 							<Label htmlFor="ob-phone">{t.phoneLabel}</Label>
 							<Input
 								id="ob-phone"
-								onChange={(e) => f.setPhone(e.target.value)}
 								placeholder={t.phonePlaceholder}
-								value={f.phone}
+								{...register("phone")}
 							/>
-						</Field>
-						<Field error={has("address")}>
+							<FieldMessage error={errors.phone} />
+						</div>
+						<div>
 							<Label htmlFor="ob-address">{t.addressLabel}</Label>
 							<Input
 								id="ob-address"
-								onChange={(e) => f.setAddress(e.target.value)}
 								placeholder={t.addressPlaceholder}
-								value={f.address}
+								{...register("address")}
 							/>
-						</Field>
-						<Field error={has("bio")}>
+							<FieldMessage error={errors.address} />
+						</div>
+						<div>
 							<Label htmlFor="ob-bio">{t.bioLabel}</Label>
 							<Textarea
 								id="ob-bio"
-								onChange={(e) => f.setBio(e.target.value)}
 								placeholder={t.bioPlaceholder}
-								value={f.bio}
+								{...register("bio")}
 							/>
-						</Field>
+							<FieldMessage error={errors.bio} />
+						</div>
 					</section>
 				)}
 
@@ -192,7 +199,8 @@ export function OnboardingFlow() {
 							<Label>{t.hoursLabel}</Label>
 							<div className="space-y-2">
 								{t.weekdayNames.map((dayName, weekday) => {
-									const day = f.schedule[weekday] as DaySchedule;
+									const day = f.schedule[weekday];
+									if (!day) return null;
 									return (
 										<div
 											className="flex flex-wrap items-center gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-surface2 px-4 py-3"
@@ -232,7 +240,7 @@ export function OnboardingFlow() {
 									);
 								})}
 							</div>
-							{has("schedule") && (
+							{!f.stepValid[2] && (
 								<p className="mt-2 text-[0.8rem] text-red">
 									{t.validationError}
 								</p>
@@ -280,7 +288,7 @@ export function OnboardingFlow() {
 										className="group relative aspect-square overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)]"
 										key={img.id}
 									>
-										{/* biome-ignore lint/performance/noImgElement: object-URL preview for a mocked upload */}
+										{/* biome-ignore lint/performance/noImgElement: object-URL preview before upload */}
 										<img
 											alt={img.name}
 											className="h-full w-full object-cover"
@@ -355,7 +363,7 @@ export function OnboardingFlow() {
 
 					{f.isLast ? (
 						<Button
-							disabled={f.errors.length > 0 || f.submitting}
+							disabled={!f.stepValid[4] || f.submitting}
 							onClick={f.submit}
 							type="button"
 							variant="success"
@@ -378,20 +386,9 @@ export function OnboardingFlow() {
 	);
 }
 
-function Field({
-	error,
-	children,
-}: {
-	error: boolean;
-	children: React.ReactNode;
-}) {
-	return (
-		<div
-			className={error ? "[&_input]:border-red [&_textarea]:border-red" : ""}
-		>
-			{children}
-		</div>
-	);
+function FieldMessage({ error }: { error?: FieldError }) {
+	if (!error?.message) return null;
+	return <p className="mt-1 text-[0.78rem] text-red">{error.message}</p>;
 }
 
 function HourSelect({
@@ -402,17 +399,18 @@ function HourSelect({
 	onChange: (hour: number) => void;
 }) {
 	return (
-		<select
-			className="rounded-md border border-[var(--border)] bg-surface px-2 py-1 text-[0.8rem] text-text focus:border-accent focus:outline-none"
-			onChange={(e) => onChange(Number(e.target.value))}
-			value={value}
-		>
-			{HOURS.map((h) => (
-				<option key={h} value={h}>
-					{t.hourValue(h)}
-				</option>
-			))}
-		</select>
+		<Select onValueChange={(v) => onChange(Number(v))} value={String(value)}>
+			<SelectTrigger aria-label={t.hourValue(value)}>
+				<SelectValue />
+			</SelectTrigger>
+			<SelectContent>
+				{HOURS.map((h) => (
+					<SelectItem key={h} value={String(h)}>
+						{t.hourValue(h)}
+					</SelectItem>
+				))}
+			</SelectContent>
+		</Select>
 	);
 }
 
