@@ -4,6 +4,7 @@ import postgres from "postgres";
 import * as schema from "../schema";
 import { seedCategories } from "./categories";
 import { assertNotProduction } from "./productionGuard";
+import { seedUsers } from "./users";
 
 type Database = ReturnType<typeof drizzle<typeof schema>>;
 type Seeder = (db: Database) => Promise<void>;
@@ -15,6 +16,7 @@ type Seeder = (db: Database) => Promise<void>;
  */
 const SEEDERS: ReadonlyArray<{ name: string; run: Seeder }> = [
 	{ name: "categories", run: seedCategories },
+	{ name: "users", run: seedUsers },
 ];
 
 async function main(): Promise<void> {
