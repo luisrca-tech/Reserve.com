@@ -5,15 +5,15 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { useAuth } from "~/features/auth/MockAuthContext";
 import { ProfileDialog } from "~/features/profile/components/ProfileDialog";
 import { profileCopy } from "~/features/profile/copy";
+import { useSessionState } from "~/features/session/SessionContext";
 import { browseCopy } from "../copy";
 import { useBrowse } from "./RestaurantBrowseContext";
 
 export function ClientNavbar() {
 	const router = useRouter();
-	const { user, logout } = useAuth();
+	const { user, logout } = useSessionState();
 	const {
 		query,
 		setQuery,

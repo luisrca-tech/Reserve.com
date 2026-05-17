@@ -11,8 +11,8 @@ import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
-import { useAuth } from "~/features/auth/MockAuthContext";
 import type { RestaurantView } from "~/features/restaurant/types";
+import { useSessionState } from "~/features/session/SessionContext";
 import { createAvailability } from "../Availability";
 import { bookingCopy } from "../copy";
 import { useReservationStore } from "./ReservationStoreContext";
@@ -42,7 +42,7 @@ function buildMonthGrid(viewYear: number, viewMonth: number): (Date | null)[] {
 }
 
 export function BookingFlow({ restaurant }: { restaurant: RestaurantView }) {
-	const { user } = useAuth();
+	const { user } = useSessionState();
 	const { restaurantReservations, addReservation } = useReservationStore();
 	const reservations = restaurantReservations(restaurant.id);
 

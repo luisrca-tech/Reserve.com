@@ -13,7 +13,7 @@ import {
 } from "~/components/ui/Dialog";
 import { Input } from "~/components/ui/Input";
 import { Label } from "~/components/ui/Label";
-import { useAuth } from "~/features/auth/MockAuthContext";
+import { useSessionState } from "~/features/session/SessionContext";
 import { profileCopy } from "../copy";
 import { toProfileFormValues } from "../types";
 
@@ -26,7 +26,7 @@ export function ProfileDialog({
 	onOpenChange: (open: boolean) => void;
 	onLogout: () => void;
 }) {
-	const { user, updateProfile } = useAuth();
+	const { user, updateProfile } = useSessionState();
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
 	const [phone, setPhone] = useState("");

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { useAuth } from "~/features/auth/MockAuthContext";
+import { useSessionState } from "~/features/session/SessionContext";
 import { onboardingCopy as t } from "./copy";
 import { mockCategories } from "./mock/categories";
 import {
@@ -33,7 +33,7 @@ let uploadSeq = 0;
  */
 export function useOnboardingForm() {
 	const router = useRouter();
-	const { completeOnboarding } = useAuth();
+	const { completeOnboarding } = useSessionState();
 
 	const [step, setStep] = useState(0);
 	const [submitting, setSubmitting] = useState(false);

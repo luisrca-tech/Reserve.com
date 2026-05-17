@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useRef, useSyncExternalStore } from "react";
 
-import { useAuth } from "~/features/auth/MockAuthContext";
+import { useSessionState } from "~/features/session/SessionContext";
 import {
 	createReservationStore,
 	type NewReservationInput,
@@ -55,7 +55,7 @@ interface ClientReservationStore {
 
 export function useReservationStore(): ClientReservationStore {
 	const store = useReservationStoreSnapshot();
-	const { user } = useAuth();
+	const { user } = useSessionState();
 	const scope = store.client(user?.id ?? "");
 
 	return {

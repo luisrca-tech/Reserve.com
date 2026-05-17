@@ -11,9 +11,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { useAuth } from "~/features/auth/MockAuthContext";
 import { ProfileDialog } from "~/features/profile/components/ProfileDialog";
 import { ReservationStoreProvider } from "~/features/reservation/components/ReservationStoreContext";
+import { useSessionState } from "~/features/session/SessionContext";
 import { ownerCopy } from "../copy";
 import { OwnerStoreProvider } from "../OwnerStoreContext";
 import { NotificationBell } from "./NotificationBell";
@@ -46,7 +46,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
 function OwnerLayout({ children }: { children: React.ReactNode }) {
 	const router = useRouter();
 	const pathname = usePathname();
-	const { user, logout } = useAuth();
+	const { user, logout } = useSessionState();
 	const [profileOpen, setProfileOpen] = useState(false);
 
 	const initial = user?.name?.charAt(0).toUpperCase() ?? "?";

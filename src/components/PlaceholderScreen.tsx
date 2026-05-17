@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
 import { authCopy } from "~/features/auth/copy";
-import { useAuth } from "~/features/auth/MockAuthContext";
+import { useSessionState } from "~/features/session/SessionContext";
 
 export function PlaceholderScreen({
 	title,
@@ -15,7 +15,7 @@ export function PlaceholderScreen({
 	subtitle: string;
 }) {
 	const router = useRouter();
-	const { user, logout } = useAuth();
+	const { user, logout } = useSessionState();
 
 	function handleLogout() {
 		logout();

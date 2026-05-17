@@ -12,12 +12,15 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { useAuth } from "~/features/auth/MockAuthContext";
 import { useReservationStoreSnapshot } from "~/features/reservation/components/ReservationStoreContext";
 import type { MockReservation } from "~/features/reservation/types";
+import { mockRestaurantViews } from "~/features/restaurant/mock/restaurants";
 import type { RestaurantView } from "~/features/restaurant/types";
-import { resolveOwnerRestaurant } from "./mappers";
-import { buildOwnerSeed, reservationGuest } from "./mock/ownerReservations";
+import {
+	useGuestProfile,
+	useSessionState,
+} from "~/features/session/SessionContext";
+import { buildOwnerSeed } from "./mock/ownerReservations";
 import {
 	createNotificationManager,
 	type NotificationSink,
@@ -70,13 +73,17 @@ export function OwnerStoreProvider({
 }: {
 	children: React.ReactNode;
 }) {
-	const { user } = useAuth();
-	const ownerId = user?.id ?? "";
+	const { activeRestaurant } = useSessionState();
+	const guestProfile = useGuestProfile();
 
 	const store = useReservationStoreSnapshot();
-	const [restaurant, setRestaurant] = useState<RestaurantView>(() =>
-		resolveOwnerRestaurant(ownerId),
-	);
+	// Session resolves which restaurant the owner manages (ownerId → restaurant,
+	// with its own fallback). This local copy holds owner-side edits (settings,
+	// table count) on top of that resolved base; `mockRestaurantViews[0]` is a
+	// transient placeholder for the pre-hydration render only.
+	const baseRestaurant = activeRestaurant ?? mockRestaurantViews[0];
+	if (!baseRestaurant) throw new Error("No seeded restaurants available");
+	const [restaurant, setRestaurant] = useState<RestaurantView>(baseRestaurant);
 	const ownerScope = store.owner(restaurant.id);
 	const reservations = ownerScope.list();
 	const managerRef = useRef(createNotificationManager(sonnerSink));
@@ -87,15 +94,14 @@ export function OwnerStoreProvider({
 		manager.getHistory,
 	);
 
-	// Resolve the managed restaurant + seed demo rows into the shared store
-	// once the mock session hydrates from the cookie. Shared client rows are
-	// already in the store's initial set; only owner-demo rows are injected.
+	// Adopt the session-resolved restaurant + seed demo rows into the shared
+	// store once the mock session hydrates. Shared client rows are already in
+	// the store's initial set; only owner-demo rows are injected.
 	useEffect(() => {
-		if (!ownerId) return;
-		const resolved = resolveOwnerRestaurant(ownerId);
-		setRestaurant(resolved);
-		store.seedOwner(buildOwnerSeed(resolved, new Date()));
-	}, [ownerId, store]);
+		if (!activeRestaurant) return;
+		setRestaurant(activeRestaurant);
+		store.seedOwner(buildOwnerSeed(activeRestaurant, new Date()));
+	}, [activeRestaurant, store]);
 
 	// Translate domain transitions/alerts emitted by the pure reducer into
 	// owner-facing notification events. No rule logic and no notification
@@ -118,7 +124,7 @@ export function OwnerStoreProvider({
 		for (const transition of transitions) {
 			const target = nextReservations.find((r) => r.id === transition.id);
 			if (!target) continue;
-			const guest = reservationGuest(target.userId);
+			const guest = guestProfile(target.userId);
 			if (transition.to === "expired") {
 				manager.notify("expired", target.id, {
 					at: now,
@@ -139,7 +145,7 @@ export function OwnerStoreProvider({
 					(r) => r.id === alert.reservationId,
 				);
 				if (!target) continue;
-				const guest = reservationGuest(target.userId);
+				const guest = guestProfile(target.userId);
 				manager.notify("reminder", alert.reservationId, {
 					at: now,
 					guestName: guest.name,
@@ -153,7 +159,7 @@ export function OwnerStoreProvider({
 				});
 			}
 		}
-	}, [restaurant, manager, store]);
+	}, [restaurant, manager, store, guestProfile]);
 
 	// In-app clock: a real interval drives the pure lifecycle module.
 	useEffect(() => {

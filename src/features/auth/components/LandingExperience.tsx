@@ -16,15 +16,18 @@ import { Input } from "~/components/ui/Input";
 import { Label } from "~/components/ui/Label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import { Textarea } from "~/components/ui/Textarea";
+import {
+	redirectPathFor,
+	useSessionState,
+} from "~/features/session/SessionContext";
 import { authCopy, landingCopy } from "../copy";
-import { redirectPathFor, useAuth } from "../MockAuthContext";
 import type { SeededUserKey } from "../types";
 
 type DialogId = "login" | "loginRestaurant" | "register" | null;
 
 export function LandingExperience() {
 	const router = useRouter();
-	const { loginAs } = useAuth();
+	const { login } = useSessionState();
 	const [openDialog, setOpenDialog] = useState<DialogId>(null);
 	const [registerTab, setRegisterTab] = useState<"client" | "restaurant">(
 		"client",
@@ -32,7 +35,7 @@ export function LandingExperience() {
 
 	function authenticate(key: SeededUserKey, successMessage: string) {
 		try {
-			const user = loginAs(key);
+			const user = login(key);
 			toast.success(successMessage);
 			setOpenDialog(null);
 			router.push(redirectPathFor(user));

@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Outfit } from "next/font/google";
 
 import { Toaster } from "~/components/ui/sonner";
-import { AuthProvider } from "~/features/auth/MockAuthContext";
+import { SessionProvider } from "~/features/session/SessionContext";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
@@ -32,7 +32,7 @@ export default function RootLayout({
 		<html className={`${cormorant.variable} ${outfit.variable}`} lang="pt-BR">
 			<body className="bg-bg text-text antialiased">
 				<TRPCReactProvider>
-					<AuthProvider>{children}</AuthProvider>
+					<SessionProvider>{children}</SessionProvider>
 				</TRPCReactProvider>
 				<Toaster />
 			</body>
