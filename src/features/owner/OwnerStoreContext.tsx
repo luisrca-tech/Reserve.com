@@ -8,6 +8,7 @@ import {
 	useMemo,
 	useRef,
 	useState,
+	useSyncExternalStore,
 } from "react";
 import { toast } from "sonner";
 
@@ -16,20 +17,29 @@ import { mockReservations } from "~/features/reservation/mock/reservations";
 import { reservationState } from "~/features/reservation/reservationState";
 import type { MockReservation } from "~/features/reservation/types";
 import type { RestaurantView } from "~/features/restaurant/types";
-import { ownerCopy } from "./copy";
 import { resolveOwnerRestaurant } from "./mappers";
 import { buildOwnerSeed, reservationGuest } from "./mock/ownerReservations";
+import {
+	createNotificationManager,
+	type NotificationSink,
+	type NotificationTone,
+	type OwnerNotification,
+} from "./NotificationManager";
 
 const TICK_MS = 20_000;
 
-export type NotificationKind = "reminder" | "expired" | "lowTables" | "auto";
+export type {
+	NotificationKind,
+	OwnerNotification,
+} from "./NotificationManager";
 
-export interface OwnerNotification {
-	key: string;
-	kind: NotificationKind;
-	message: string;
-	at: Date;
-}
+const sonnerSink: NotificationSink = {
+	emit(tone: NotificationTone, message: string) {
+		if (tone === "success") toast.success(message);
+		else if (tone === "warning") toast.warning(message);
+		else toast.info(message);
+	},
+};
 
 /** Editable subset of the restaurant managed from Configurações. */
 export interface OwnerSettingsUpdate {
@@ -68,8 +78,13 @@ export function OwnerStoreProvider({
 		resolveOwnerRestaurant(ownerId),
 	);
 	const [reservations, setReservations] = useState<MockReservation[]>([]);
-	const [notifications, setNotifications] = useState<OwnerNotification[]>([]);
-	const firedKeys = useRef<Set<string>>(new Set());
+	const managerRef = useRef(createNotificationManager(sonnerSink));
+	const manager = managerRef.current;
+	const notifications = useSyncExternalStore(
+		manager.subscribe,
+		manager.getHistory,
+		manager.getHistory,
+	);
 
 	// Resolve the managed restaurant + seed reservations once the mock
 	// session hydrates from the cookie.
@@ -84,18 +99,9 @@ export function OwnerStoreProvider({
 		setReservations([...buildOwnerSeed(resolved, now), ...shared]);
 	}, [ownerId]);
 
-	const pushNotification = useCallback(
-		(notification: OwnerNotification, toastFn: (msg: string) => void) => {
-			if (firedKeys.current.has(notification.key)) return;
-			firedKeys.current.add(notification.key);
-			setNotifications((prev) => [notification, ...prev]);
-			toastFn(notification.message);
-		},
-		[],
-	);
-
 	// Translate domain transitions/alerts emitted by the pure reducer into
-	// owner-facing notifications. No rule logic lives here.
+	// owner-facing notification events. No rule logic and no notification
+	// plumbing here — the manager owns dedup, tone, and message construction.
 	const runTick = useCallback(() => {
 		const now = new Date();
 		setReservations((prev) => {
@@ -116,28 +122,16 @@ export function OwnerStoreProvider({
 				if (!target) continue;
 				const guest = reservationGuest(target.userId);
 				if (transition.to === "expired") {
-					pushNotification(
-						{
-							key: `expired:${target.id}`,
-							kind: "expired",
-							message: ownerCopy.notifications.expired(
-								guest.name,
-								timeLabel(target.startTime),
-							),
-							at: now,
-						},
-						toast.warning,
-					);
+					manager.notify("expired", target.id, {
+						at: now,
+						guestName: guest.name,
+						time: timeLabel(target.startTime),
+					});
 				} else if (transition.to === "confirmed") {
-					pushNotification(
-						{
-							key: `auto:${target.id}`,
-							kind: "auto",
-							message: ownerCopy.notifications.autoConfirmed(guest.name),
-							at: now,
-						},
-						toast.success,
-					);
+					manager.notify("auto", target.id, {
+						at: now,
+						guestName: guest.name,
+					});
 				}
 			}
 
@@ -148,37 +142,23 @@ export function OwnerStoreProvider({
 					);
 					if (!target) continue;
 					const guest = reservationGuest(target.userId);
-					pushNotification(
-						{
-							key: `reminder:${alert.reservationId}`,
-							kind: "reminder",
-							message: ownerCopy.notifications.reminder(
-								guest.name,
-								timeLabel(target.startTime),
-							),
-							at: now,
-						},
-						toast.info,
-					);
+					manager.notify("reminder", alert.reservationId, {
+						at: now,
+						guestName: guest.name,
+						time: timeLabel(target.startTime),
+					});
 				} else {
-					pushNotification(
-						{
-							key: `low:${alert.slotMs}`,
-							kind: "lowTables",
-							message: ownerCopy.notifications.lowTables(
-								timeLabel(alert.startTime),
-								alert.remaining,
-							),
-							at: now,
-						},
-						toast.warning,
-					);
+					manager.notify("lowTables", String(alert.slotMs), {
+						at: now,
+						time: timeLabel(alert.startTime),
+						remaining: alert.remaining,
+					});
 				}
 			}
 
 			return nextReservations;
 		});
-	}, [restaurant, pushNotification]);
+	}, [restaurant, manager]);
 
 	// In-app clock: a real interval drives the pure lifecycle module.
 	useEffect(() => {
@@ -217,8 +197,8 @@ export function OwnerStoreProvider({
 	}, []);
 
 	const clearNotifications = useCallback(() => {
-		setNotifications([]);
-	}, []);
+		manager.clear();
+	}, [manager]);
 
 	const value = useMemo<OwnerStoreValue>(
 		() => ({

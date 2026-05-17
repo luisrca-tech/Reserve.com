@@ -4,13 +4,13 @@ import { Bell } from "lucide-react";
 import { useState } from "react";
 
 import { ownerCopy } from "../copy";
-import { type NotificationKind, useOwnerStore } from "../OwnerStoreContext";
+import type { NotificationTone } from "../NotificationManager";
+import { useOwnerStore } from "../OwnerStoreContext";
 
-const toneByKind: Record<NotificationKind, string> = {
-	reminder: "text-accent",
-	expired: "text-red",
-	lowTables: "text-red",
-	auto: "text-green",
+const colorByTone: Record<NotificationTone, string> = {
+	info: "text-accent",
+	success: "text-green",
+	warning: "text-red",
 };
 
 export function NotificationBell() {
@@ -69,7 +69,7 @@ export function NotificationBell() {
 										className="rounded-md px-2 py-2 text-sm transition-colors hover:bg-surface2"
 										key={n.key}
 									>
-										<span className={`mr-2 font-bold ${toneByKind[n.kind]}`}>
+										<span className={`mr-2 font-bold ${colorByTone[n.tone]}`}>
 											•
 										</span>
 										<span className="text-text2">{n.message}</span>
