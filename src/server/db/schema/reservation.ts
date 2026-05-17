@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
 	index,
+	integer,
 	pgTable,
 	text,
 	timestamp,
@@ -23,6 +24,8 @@ export const reservation = pgTable(
 			.references(() => restaurant.id, { onDelete: "cascade" }),
 		startTime: timestamp("start_time", { withTimezone: true }).notNull(),
 		endTime: timestamp("end_time", { withTimezone: true }).notNull(),
+		partySize: integer("party_size").notNull().default(2),
+		tableCount: integer("table_count").notNull().default(1),
 		status: reservationStatusEnum("status").notNull().default("pending"),
 		validatedAt: timestamp("validated_at", { withTimezone: true }),
 		cancelledAt: timestamp("cancelled_at", { withTimezone: true }),

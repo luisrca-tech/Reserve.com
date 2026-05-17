@@ -3,14 +3,14 @@ import { describe, expect, it } from "vitest";
 import type { AvailabilityContext } from "./Availability";
 import { DEFAULT_LIFECYCLE_CONFIG } from "./lifecycle";
 import { reservationState } from "./reservationState";
-import type { MockReservation } from "./types";
+import type { Reservation } from "./types";
 
 const T0 = new Date("2026-06-02T18:00:00.000Z").getTime();
 const { expiryMs, reminderMs } = DEFAULT_LIFECYCLE_CONFIG;
 
 function resv(
-	over: Partial<MockReservation> & { id: string },
-): MockReservation {
+	over: Partial<Reservation> & { id: string },
+): Reservation {
 	const startTime = over.startTime ?? new Date(T0 + 6 * 60 * 60 * 1000);
 	return {
 		userId: "u1",

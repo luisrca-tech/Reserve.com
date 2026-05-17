@@ -8,7 +8,7 @@ import {
 	type NewReservationInput,
 	type ReservationStore,
 } from "../reservationStore";
-import type { MockReservation } from "../types";
+import type { Reservation } from "../types";
 
 const ReservationStoreContext = createContext<ReservationStore | null>(null);
 
@@ -46,10 +46,10 @@ export function useReservationStoreSnapshot(): ReservationStore {
 
 interface ClientReservationStore {
 	/** The signed-in user's own reservations (history view). */
-	reservations: MockReservation[];
+	reservations: Reservation[];
 	/** Restaurant-wide rows for booking-capacity reads only. */
-	restaurantReservations: (restaurantId: string) => MockReservation[];
-	addReservation: (input: NewReservationInput) => MockReservation;
+	restaurantReservations: (restaurantId: string) => Reservation[];
+	addReservation: (input: NewReservationInput) => Reservation;
 	cancelReservation: (id: string) => void;
 }
 

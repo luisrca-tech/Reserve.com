@@ -19,6 +19,10 @@ export interface ReservationSpec {
 	/** Local hour of day the booking starts. */
 	hour: number;
 	durationMinutes: number;
+	/** Guests on the booking. */
+	partySize: number;
+	/** Tables the booking occupies (≤ partySize). */
+	tableCount: number;
 }
 
 const DEFAULT_DURATION = 90;
@@ -35,6 +39,8 @@ export function buildReservationSpecs(): ReservationSpec[] {
 		status: ReservationStatus,
 		dayOffset: number,
 		hour: number,
+		partySize: number,
+		tableCount: number,
 	): ReservationSpec => ({
 		slug,
 		restaurantSlug,
@@ -42,17 +48,19 @@ export function buildReservationSpecs(): ReservationSpec[] {
 		dayOffset,
 		hour,
 		durationMinutes: DEFAULT_DURATION,
+		partySize,
+		tableCount,
 	});
 
 	return [
-		base("resv_cantina_pending_upcoming", "rest_cantina_bella", "pending", 3, 20),
-		base("resv_cantina_confirmed_upcoming", "rest_cantina_bella", "confirmed", 7, 21),
-		base("resv_cantina_confirmed_past", "rest_cantina_bella", "confirmed", -10, 20),
-		base("resv_cantina_pending_past", "rest_cantina_bella", "pending", -2, 19),
-		base("resv_sushi_pending_upcoming", "rest_sushi_kai", "pending", 2, 19),
-		base("resv_sushi_cancelled_upcoming", "rest_sushi_kai", "cancelled", 5, 20),
-		base("resv_brasa_confirmed_upcoming", "rest_brasa_viva", "confirmed", 14, 13),
-		base("resv_brasa_cancelled_past", "rest_brasa_viva", "cancelled", -4, 14),
+		base("resv_cantina_pending_upcoming", "rest_cantina_bella", "pending", 3, 20, 4, 2),
+		base("resv_cantina_confirmed_upcoming", "rest_cantina_bella", "confirmed", 7, 21, 2, 1),
+		base("resv_cantina_confirmed_past", "rest_cantina_bella", "confirmed", -10, 20, 6, 3),
+		base("resv_cantina_pending_past", "rest_cantina_bella", "pending", -2, 19, 3, 2),
+		base("resv_sushi_pending_upcoming", "rest_sushi_kai", "pending", 2, 19, 2, 1),
+		base("resv_sushi_cancelled_upcoming", "rest_sushi_kai", "cancelled", 5, 20, 5, 3),
+		base("resv_brasa_confirmed_upcoming", "rest_brasa_viva", "confirmed", 14, 13, 8, 4),
+		base("resv_brasa_cancelled_past", "rest_brasa_viva", "cancelled", -4, 14, 2, 1),
 	];
 }
 
@@ -112,6 +120,8 @@ export async function seedReservations(db: Database): Promise<void> {
 				startTime,
 				endTime,
 				status: spec.status,
+				partySize: spec.partySize,
+				tableCount: spec.tableCount,
 				validatedAt: spec.status === "confirmed" ? new Date(now) : null,
 				cancelledAt: spec.status === "cancelled" ? new Date(now) : null,
 			})
@@ -122,6 +132,8 @@ export async function seedReservations(db: Database): Promise<void> {
 					startTime: sql`excluded.start_time`,
 					endTime: sql`excluded.end_time`,
 					status: sql`excluded.status`,
+					partySize: sql`excluded.party_size`,
+					tableCount: sql`excluded.table_count`,
 					validatedAt: sql`excluded.validated_at`,
 					cancelledAt: sql`excluded.cancelled_at`,
 				},

@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { AvailabilityContext } from "./Availability";
 import { createReservationStore } from "./reservationStore";
-import type { MockReservation } from "./types";
+import type { Reservation } from "./types";
 
 const T0 = new Date("2026-06-02T18:00:00.000Z");
 
 function resv(
-	over: Partial<MockReservation> & { id: string },
-): MockReservation {
+	over: Partial<Reservation> & { id: string },
+): Reservation {
 	const startTime = over.startTime ?? new Date(T0.getTime() + 6 * 3_600_000);
 	return {
 		userId: "u1",

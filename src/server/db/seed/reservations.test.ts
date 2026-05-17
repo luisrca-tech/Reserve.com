@@ -50,6 +50,8 @@ describe("reservation specs", () => {
 				dayOffset: 2,
 				hour: 20,
 				durationMinutes: 90,
+				partySize: 4,
+				tableCount: 2,
 			},
 			now,
 		);
@@ -58,6 +60,16 @@ describe("reservation specs", () => {
 		expect(endTime.getTime() - startTime.getTime()).toBe(90 * 60_000);
 		expect(startTime.getHours()).toBe(20);
 		expect(startTime.getMinutes()).toBe(0);
+	});
+
+	it("carries realistic party size and table count on every spec", () => {
+		const specs = buildReservationSpecs();
+		for (const spec of specs) {
+			expect(spec.partySize).toBeGreaterThanOrEqual(1);
+			expect(spec.tableCount).toBeGreaterThanOrEqual(1);
+			expect(spec.tableCount).toBeLessThanOrEqual(spec.partySize);
+		}
+		expect(new Set(specs.map((s) => s.partySize)).size).toBeGreaterThan(1);
 	});
 
 	it("is deterministic across separate builder calls", () => {

@@ -5,10 +5,10 @@ import {
 	type LifecycleTransition,
 	nextStates,
 } from "./lifecycle";
-import type { MockReservation } from "./types";
+import type { Reservation } from "./types";
 
 export interface ReservationStateInput {
-	reservations: MockReservation[];
+	reservations: Reservation[];
 	/** Capacity + lifecycle facts for the managed restaurant. */
 	restaurant: AvailabilityContext;
 	/** The current time, supplied from outside — never read in here. */
@@ -31,7 +31,7 @@ export type ReservationAlert =
 
 export interface ReservationStateResult {
 	/** Reservations with any due transitions applied (same order in). */
-	nextReservations: MockReservation[];
+	nextReservations: Reservation[];
 	transitions: LifecycleTransition[];
 	alerts: ReservationAlert[];
 }

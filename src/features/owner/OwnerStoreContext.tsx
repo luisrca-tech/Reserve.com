@@ -13,7 +13,7 @@ import {
 import { toast } from "sonner";
 
 import { useReservationStoreSnapshot } from "~/features/reservation/components/ReservationStoreContext";
-import type { MockReservation } from "~/features/reservation/types";
+import type { Reservation } from "~/features/reservation/types";
 import { mockRestaurantViews } from "~/features/restaurant/mock/restaurants";
 import type { RestaurantView } from "~/features/restaurant/types";
 import {
@@ -53,7 +53,7 @@ export interface OwnerSettingsUpdate {
 
 interface OwnerStoreValue {
 	restaurant: RestaurantView;
-	reservations: MockReservation[];
+	reservations: Reservation[];
 	notifications: OwnerNotification[];
 	validateReservation: (id: string) => void;
 	setAutoConfirm: (enabled: boolean) => void;

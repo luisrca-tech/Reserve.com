@@ -5,7 +5,7 @@ import {
 	type ReservationStateResult,
 	reservationState,
 } from "./reservationState";
-import type { MockReservation } from "./types";
+import type { Reservation } from "./types";
 
 export interface NewReservationInput {
 	userId: string;
@@ -19,20 +19,20 @@ export interface NewReservationInput {
 
 /** Client-role surface: a guest only ever touches their own reservations. */
 export interface ClientReservationScope {
-	list(): MockReservation[];
+	list(): Reservation[];
 	/**
 	 * Restaurant-wide rows for capacity reads only (booking availability).
 	 * A read, not a mutation — narrower than the pre-merge client store,
 	 * which exposed every restaurant's reservations to the client.
 	 */
-	restaurantReservations(restaurantId: string): MockReservation[];
-	addReservation(input: NewReservationInput, now: Date): MockReservation;
+	restaurantReservations(restaurantId: string): Reservation[];
+	addReservation(input: NewReservationInput, now: Date): Reservation;
 	cancelReservation(id: string, now: Date): void;
 }
 
 /** Owner-role surface: scoped to a single managed restaurant. */
 export interface OwnerReservationScope {
-	list(): MockReservation[];
+	list(): Reservation[];
 	validateReservation(id: string, now: Date): void;
 	applyTick(
 		restaurant: AvailabilityContext,
@@ -42,10 +42,10 @@ export interface OwnerReservationScope {
 }
 
 export interface ReservationStore {
-	getSnapshot(): MockReservation[];
+	getSnapshot(): Reservation[];
 	subscribe(listener: () => void): () => void;
 	/** Adds reservations whose id is not already present (idempotent). */
-	seedOwner(reservations: MockReservation[]): void;
+	seedOwner(reservations: Reservation[]): void;
 	client(userId: string): ClientReservationScope;
 	owner(restaurantId: string): OwnerReservationScope;
 }
@@ -60,9 +60,9 @@ export interface ReservationStore {
  * same interface without re-touching callers.
  */
 export function createReservationStore(
-	seed: MockReservation[] = mockReservations,
+	seed: Reservation[] = mockReservations,
 ): ReservationStore {
-	let reservations: MockReservation[] = [...seed];
+	let reservations: Reservation[] = [...seed];
 	const listeners = new Set<() => void>();
 	let sequence = 0;
 
@@ -70,7 +70,7 @@ export function createReservationStore(
 		for (const listener of listeners) listener();
 	}
 
-	function setReservations(next: MockReservation[]) {
+	function setReservations(next: Reservation[]) {
 		reservations = next;
 		emit();
 	}
@@ -85,7 +85,7 @@ export function createReservationStore(
 			},
 			addReservation(input, now) {
 				sequence += 1;
-				const reservation: MockReservation = {
+				const reservation: Reservation = {
 					id: `resv_new_${sequence}`,
 					userId: input.userId,
 					restaurantId: input.restaurantId,

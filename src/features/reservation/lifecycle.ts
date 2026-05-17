@@ -1,4 +1,4 @@
-import type { MockReservation, Reservation } from "./types";
+import type { Reservation } from "./types";
 
 /** Tunable lifecycle durations; overridable to short values for the demo. */
 export interface LifecycleConfig {
@@ -15,7 +15,7 @@ export const DEFAULT_LIFECYCLE_CONFIG: LifecycleConfig = {
 
 export interface LifecycleInput {
 	now: Date;
-	reservations: MockReservation[];
+	reservations: Reservation[];
 	/** Per-restaurant auto-confirm flag resolver. */
 	autoConfirm: (restaurantId: string) => boolean;
 	config?: LifecycleConfig;
@@ -29,7 +29,7 @@ export interface LifecycleTransition {
 
 export interface LifecycleResult {
 	/** Reservations with any due transitions applied (same order in). */
-	reservations: MockReservation[];
+	reservations: Reservation[];
 	transitions: LifecycleTransition[];
 	/** Ids currently inside the pre-start reminder window. */
 	reminders: string[];
@@ -82,7 +82,7 @@ export function nextStates(input: LifecycleInput): LifecycleResult {
  * (same reference) so callers route validation through here instead of
  * hand-mutating status. React-free and pure.
  */
-export function validate(r: MockReservation, now: Date): MockReservation {
+export function validate(r: Reservation, now: Date): Reservation {
 	if (r.status !== "pending") return r;
 	return { ...r, status: "confirmed", validatedAt: now };
 }

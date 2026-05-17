@@ -1,6 +1,6 @@
 import { mockUsers } from "~/features/auth/mock/users";
 import { toReservationView } from "../mappers";
-import type { MockReservation } from "../types";
+import type { Reservation } from "../types";
 
 const CLIENT_ID = mockUsers.client.id;
 const SEED_DATE = new Date("2026-01-01T12:00:00.000Z");
@@ -9,10 +9,10 @@ function reservation(
 	id: string,
 	restaurantId: string,
 	start: string,
-	status: MockReservation["status"],
+	status: Reservation["status"],
 	partySize: number,
 	tableCount: number,
-): MockReservation {
+): Reservation {
 	const startTime = new Date(start);
 	const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
 	return {
@@ -30,7 +30,7 @@ function reservation(
 	};
 }
 
-export const mockReservations: MockReservation[] = [
+export const mockReservations: Reservation[] = [
 	reservation(
 		"resv_active_bella",
 		"rest_cantina_bella",

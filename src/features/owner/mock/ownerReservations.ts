@@ -1,5 +1,5 @@
 import { mockUsersById } from "~/features/auth/mock/users";
-import type { MockReservation } from "~/features/reservation/types";
+import type { Reservation } from "~/features/reservation/types";
 import type { RestaurantView } from "~/features/restaurant/types";
 
 /** Synthetic guests for owner demo rows that are not seeded `user` rows. */
@@ -43,11 +43,11 @@ function reservation(
 	userId: string,
 	restaurantId: string,
 	startTime: Date,
-	status: MockReservation["status"],
+	status: Reservation["status"],
 	partySize: number,
 	tableCount: number,
 	createdAt: Date,
-): MockReservation {
+): Reservation {
 	return {
 		id,
 		userId,
@@ -71,7 +71,7 @@ function reservation(
 export function buildOwnerSeed(
 	restaurant: RestaurantView,
 	now: Date,
-): MockReservation[] {
+): Reservation[] {
 	const day = nextOpenDate(restaurant, now);
 	const openHours = restaurant.hoursByWeekday[day.getUTCDay()] ?? [];
 	const firstHour = openHours[0] ?? 19;
