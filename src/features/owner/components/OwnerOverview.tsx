@@ -5,7 +5,6 @@ import { useMemo } from "react";
 
 import { statusMeta } from "~/features/reservation/copy";
 import { ownerCopy } from "../copy";
-import { reservationGuest } from "../mock/ownerReservations";
 import { useOwnerStore } from "../OwnerStoreContext";
 
 const toneClass: Record<string, string> = {
@@ -100,7 +99,6 @@ export function OwnerOverview() {
 				) : (
 					<div className="flex flex-col gap-3">
 						{today.map((r) => {
-							const guest = reservationGuest(r.userId);
 							const meta = statusMeta[r.status];
 							return (
 								<article
@@ -110,7 +108,7 @@ export function OwnerOverview() {
 									<span className="font-semibold font-serif text-[1.05rem] text-text">
 										{timeLabel(r.startTime)}
 									</span>
-									<span className="text-sm text-text2">{guest.name}</span>
+									<span className="text-sm text-text2">{r.guestName}</span>
 									<span className="text-muted text-sm">
 										{ownerCopy.reservations.people(r.partySize)} ·{" "}
 										{ownerCopy.reservations.tables(r.tableCount)}

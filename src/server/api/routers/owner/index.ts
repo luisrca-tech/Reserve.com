@@ -1,7 +1,12 @@
 import { createTRPCRouter } from "~/server/api/trpc";
+import { ownerReservations, ownerRestaurant } from "./queries";
 
 /**
- * Skeleton. Procedures land under `queries/` and `mutations/` and are
- * composed flat here (path stays `owner.<procedure>`). Wired from P4a.
+ * `queries/` and `mutations/` are organisational only — procedures are
+ * composed flat here so tRPC call paths stay `owner.<procedure>`.
+ * Mutations land in P4b/P4c.
  */
-export const ownerRouter = createTRPCRouter({});
+export const ownerRouter = createTRPCRouter({
+	restaurant: ownerRestaurant,
+	reservations: ownerReservations,
+});

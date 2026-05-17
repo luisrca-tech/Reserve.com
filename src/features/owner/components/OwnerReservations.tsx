@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Button } from "~/components/ui/Button";
 import { statusMeta } from "~/features/reservation/copy";
 import { ownerCopy } from "../copy";
-import { reservationGuest } from "../mock/ownerReservations";
 import { useOwnerStore } from "../OwnerStoreContext";
 
 const toneClass: Record<string, string> = {
@@ -118,7 +117,6 @@ export function OwnerReservations() {
 						</thead>
 						<tbody>
 							{ordered.map((r) => {
-								const guest = reservationGuest(r.userId);
 								const meta = statusMeta[r.status];
 								return (
 									<tr
@@ -126,7 +124,7 @@ export function OwnerReservations() {
 										key={r.id}
 									>
 										<td className="px-4 py-3 font-medium text-text">
-											{guest.name}
+											{r.guestName}
 										</td>
 										<td className="px-4 py-3 text-text2">
 											{whenLabel(r.startTime)}
@@ -137,7 +135,7 @@ export function OwnerReservations() {
 										<td className="px-4 py-3 text-text2">
 											{ownerCopy.reservations.tables(r.tableCount)}
 										</td>
-										<td className="px-4 py-3 text-text2">{guest.phone}</td>
+										<td className="px-4 py-3 text-text2">{r.guestPhone}</td>
 										<td className="px-4 py-3">
 											<span
 												className={`rounded-full px-3 py-1 font-medium text-[0.72rem] ${toneClass[meta.tone]}`}

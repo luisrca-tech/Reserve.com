@@ -10,7 +10,6 @@ import {
 } from "react";
 
 import type { Role } from "~/features/auth/types";
-import { reservationGuest } from "~/features/owner/mock/ownerReservations";
 import { authClient } from "~/server/better-auth/client";
 import {
 	createSessionState,
@@ -36,7 +35,13 @@ const SessionContext = createContext<SessionState | null>(null);
 export function SessionProvider({ children }: { children: React.ReactNode }) {
 	const stateRef = useRef<SessionState>(undefined);
 	if (!stateRef.current) {
-		stateRef.current = createSessionState({ baseGuest: reservationGuest });
+		// The owner panel now resolves guest identity server-side via
+		// `owner.reservations`, so the in-session guest resolver has no real
+		// consumer here; it stays an inert default, fully retired with the
+		// profile shim in P5c.
+		stateRef.current = createSessionState({
+			baseGuest: () => ({ name: "Cliente", phone: "—" }),
+		});
 	}
 	const state = stateRef.current;
 

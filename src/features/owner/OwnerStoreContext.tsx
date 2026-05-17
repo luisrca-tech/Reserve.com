@@ -6,42 +6,18 @@ import {
 	useContext,
 	useEffect,
 	useMemo,
-	useRef,
 	useState,
-	useSyncExternalStore,
 } from "react";
-import { toast } from "sonner";
 
-import { useReservationStoreSnapshot } from "~/features/reservation/components/ReservationStoreContext";
-import type { Reservation } from "~/features/reservation/types";
-import { mockRestaurantViews } from "~/features/restaurant/mock/restaurants";
 import type { RestaurantView } from "~/features/restaurant/types";
-import {
-	useGuestProfile,
-	useSessionState,
-} from "~/features/session/SessionContext";
-import { buildOwnerSeed } from "./mock/ownerReservations";
-import {
-	createNotificationManager,
-	type NotificationSink,
-	type NotificationTone,
-	type OwnerNotification,
-} from "./NotificationManager";
-
-const TICK_MS = 20_000;
+import { api } from "~/trpc/react";
+import type { OwnerNotification } from "./NotificationManager";
+import type { OwnerReservationView } from "./types";
 
 export type {
 	NotificationKind,
 	OwnerNotification,
 } from "./NotificationManager";
-
-const sonnerSink: NotificationSink = {
-	emit(tone: NotificationTone, message: string) {
-		if (tone === "success") toast.success(message);
-		else if (tone === "warning") toast.warning(message);
-		else toast.info(message);
-	},
-};
 
 /** Editable subset of the restaurant managed from Configurações. */
 export interface OwnerSettingsUpdate {
@@ -53,7 +29,11 @@ export interface OwnerSettingsUpdate {
 
 interface OwnerStoreValue {
 	restaurant: RestaurantView;
-	reservations: Reservation[];
+	reservations: OwnerReservationView[];
+	/**
+	 * Reminders / low-capacity warnings. Empty in P4a — P4c derives these
+	 * client-side from `owner.reservations` and surfaces them in the bell.
+	 */
 	notifications: OwnerNotification[];
 	validateReservation: (id: string) => void;
 	setAutoConfirm: (enabled: boolean) => void;
@@ -64,127 +44,65 @@ interface OwnerStoreValue {
 
 const OwnerStoreContext = createContext<OwnerStoreValue | null>(null);
 
-function timeLabel(date: Date): string {
-	return `${String(date.getUTCHours()).padStart(2, "0")}:00`;
-}
+/** Local-only edits layered over the server restaurant until P4c persists them. */
+type RestaurantEdits = Partial<
+	Pick<
+		RestaurantView,
+		| "name"
+		| "phone"
+		| "description"
+		| "autoConfirmEnabled"
+		| "tableCount"
+		| "hoursByWeekday"
+	>
+>;
 
 export function OwnerStoreProvider({
 	children,
 }: {
 	children: React.ReactNode;
 }) {
-	const { activeRestaurant } = useSessionState();
-	const guestProfile = useGuestProfile();
+	// The panel layout guard redirects an owner-without-restaurant to
+	// onboarding, so within the panel the query is always populated.
+	const [serverRestaurant] = api.owner.restaurant.useSuspenseQuery();
+	const [serverReservations] = api.owner.reservations.useSuspenseQuery();
+	if (!serverRestaurant) {
+		throw new Error("Owner panel rendered without a restaurant");
+	}
 
-	const store = useReservationStoreSnapshot();
-	// Session resolves which restaurant the owner manages (ownerId → restaurant,
-	// with its own fallback). This local copy holds owner-side edits (settings,
-	// table count) on top of that resolved base; `mockRestaurantViews[0]` is a
-	// transient placeholder for the pre-hydration render only.
-	const baseRestaurant = activeRestaurant ?? mockRestaurantViews[0];
-	if (!baseRestaurant) throw new Error("No seeded restaurants available");
-	const [restaurant, setRestaurant] = useState<RestaurantView>(baseRestaurant);
-	const ownerScope = store.owner(restaurant.id);
-	const reservations = ownerScope.list();
-	const managerRef = useRef(createNotificationManager(sonnerSink));
-	const manager = managerRef.current;
-	const notifications = useSyncExternalStore(
-		manager.subscribe,
-		manager.getHistory,
-		manager.getHistory,
+	// P4a is read-only. The owner action buttons (validate, auto-confirm,
+	// table count, settings) stay interactive as in-session local overlays;
+	// P4b/P4c replace these with real optimistic mutations.
+	const [edits, setEdits] = useState<RestaurantEdits>({});
+	const [reservations, setReservations] = useState(serverReservations);
+
+	useEffect(() => {
+		setReservations(serverReservations);
+	}, [serverReservations]);
+
+	const restaurant = useMemo<RestaurantView>(
+		() => ({ ...serverRestaurant, ...edits }),
+		[serverRestaurant, edits],
 	);
 
-	// Adopt the session-resolved restaurant + seed demo rows into the shared
-	// store once the mock session hydrates. Shared client rows are already in
-	// the store's initial set; only owner-demo rows are injected.
-	useEffect(() => {
-		if (!activeRestaurant) return;
-		setRestaurant(activeRestaurant);
-		store.seedOwner(buildOwnerSeed(activeRestaurant, new Date()));
-	}, [activeRestaurant, store]);
-
-	// Translate domain transitions/alerts emitted by the pure reducer into
-	// owner-facing notification events. No rule logic and no notification
-	// plumbing here — the manager owns dedup, tone, and message construction.
-	const runTick = useCallback(() => {
-		const now = new Date();
-		const { nextReservations, transitions, alerts } = store
-			.owner(restaurant.id)
-			.applyTick(
-				{
-					restaurantId: restaurant.id,
-					tableCount: restaurant.tableCount,
-					autoConfirmEnabled: restaurant.autoConfirmEnabled,
-					lowTableThreshold: restaurant.lowTableThreshold,
-					hoursByWeekday: restaurant.hoursByWeekday,
-				},
-				now,
-			);
-
-		for (const transition of transitions) {
-			const target = nextReservations.find((r) => r.id === transition.id);
-			if (!target) continue;
-			const guest = guestProfile(target.userId);
-			if (transition.to === "expired") {
-				manager.notify("expired", target.id, {
-					at: now,
-					guestName: guest.name,
-					time: timeLabel(target.startTime),
-				});
-			} else if (transition.to === "confirmed") {
-				manager.notify("auto", target.id, {
-					at: now,
-					guestName: guest.name,
-				});
-			}
-		}
-
-		for (const alert of alerts) {
-			if (alert.kind === "reminder") {
-				const target = nextReservations.find(
-					(r) => r.id === alert.reservationId,
-				);
-				if (!target) continue;
-				const guest = guestProfile(target.userId);
-				manager.notify("reminder", alert.reservationId, {
-					at: now,
-					guestName: guest.name,
-					time: timeLabel(target.startTime),
-				});
-			} else {
-				manager.notify("lowTables", String(alert.slotMs), {
-					at: now,
-					time: timeLabel(alert.startTime),
-					remaining: alert.remaining,
-				});
-			}
-		}
-	}, [restaurant, manager, store, guestProfile]);
-
-	// In-app clock: a real interval drives the pure lifecycle module.
-	useEffect(() => {
-		runTick();
-		const handle = setInterval(runTick, TICK_MS);
-		return () => clearInterval(handle);
-	}, [runTick]);
-
-	const validateReservation = useCallback(
-		(id: string) => {
-			store.owner(restaurant.id).validateReservation(id, new Date());
-		},
-		[store, restaurant.id],
-	);
+	const validateReservation = useCallback((id: string) => {
+		setReservations((prev) =>
+			prev.map((r) =>
+				r.id === id ? { ...r, status: "confirmed" as const } : r,
+			),
+		);
+	}, []);
 
 	const setAutoConfirm = useCallback((enabled: boolean) => {
-		setRestaurant((prev) => ({ ...prev, autoConfirmEnabled: enabled }));
+		setEdits((prev) => ({ ...prev, autoConfirmEnabled: enabled }));
 	}, []);
 
 	const saveTableCount = useCallback((tableCount: number) => {
-		setRestaurant((prev) => ({ ...prev, tableCount }));
+		setEdits((prev) => ({ ...prev, tableCount }));
 	}, []);
 
 	const saveSettings = useCallback((values: OwnerSettingsUpdate) => {
-		setRestaurant((prev) => ({
+		setEdits((prev) => ({
 			...prev,
 			name: values.name,
 			phone: values.phone,
@@ -193,15 +111,13 @@ export function OwnerStoreProvider({
 		}));
 	}, []);
 
-	const clearNotifications = useCallback(() => {
-		manager.clear();
-	}, [manager]);
+	const clearNotifications = useCallback(() => {}, []);
 
 	const value = useMemo<OwnerStoreValue>(
 		() => ({
 			restaurant,
 			reservations,
-			notifications,
+			notifications: [],
 			validateReservation,
 			setAutoConfirm,
 			saveTableCount,
@@ -211,7 +127,6 @@ export function OwnerStoreProvider({
 		[
 			restaurant,
 			reservations,
-			notifications,
 			validateReservation,
 			setAutoConfirm,
 			saveTableCount,
