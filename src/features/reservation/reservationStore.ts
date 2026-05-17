@@ -5,7 +5,6 @@ import {
 	reservationState,
 	validate,
 } from "~/server/domain/reservation";
-import { mockReservations } from "./mock/reservations";
 import type { Reservation } from "./types";
 
 export interface NewReservationInput {
@@ -61,7 +60,7 @@ export interface ReservationStore {
  * same interface without re-touching callers.
  */
 export function createReservationStore(
-	seed: Reservation[] = mockReservations,
+	seed: Reservation[] = [],
 ): ReservationStore {
 	let reservations: Reservation[] = [...seed];
 	const listeners = new Set<() => void>();

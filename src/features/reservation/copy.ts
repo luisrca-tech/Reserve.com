@@ -69,5 +69,6 @@ export const historyCopy = {
 	tables: (n: number) => `${n} ${n === 1 ? "mesa" : "mesas"}`,
 	cancel: "Cancelar reserva",
 	cancelled: "Reserva cancelada.",
+	cancelError: "Não foi possível cancelar a reserva. Tente novamente.",
 	at: "às",
 } as const;

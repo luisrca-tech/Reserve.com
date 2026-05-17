@@ -1,5 +1,6 @@
 import { createTRPCRouter } from "~/server/api/trpc";
-import { createReservation } from "./mutations";
+import { cancelReservation, createReservation } from "./mutations";
+import { listReservations } from "./queries";
 
 /**
  * `queries/` and `mutations/` are organisational only — procedures are
@@ -7,4 +8,6 @@ import { createReservation } from "./mutations";
  */
 export const reservationRouter = createTRPCRouter({
 	create: createReservation,
+	list: listReservations,
+	cancel: cancelReservation,
 });

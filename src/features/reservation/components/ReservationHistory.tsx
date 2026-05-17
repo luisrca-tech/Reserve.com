@@ -6,11 +6,9 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
-import { mockRestaurantViewsById } from "~/features/restaurant/mock/restaurants";
+import { api } from "~/trpc/react";
 import { bookingCopy, historyCopy, statusMeta } from "../copy";
-import { toReservationView } from "../mappers";
 import type { ReservationView } from "../types";
-import { useReservationStore } from "./ReservationStoreContext";
 
 const ACTIVE_STATUSES: ReservationView["status"][] = ["pending", "confirmed"];
 
@@ -32,30 +30,56 @@ function timeLabel(date: Date): string {
 }
 
 export function ReservationHistory() {
-	const { reservations, cancelReservation } = useReservationStore();
+	const utils = api.useUtils();
+	const [reservations] = api.reservation.list.useSuspenseQuery();
+
+	// Optimistic: cancel in-flight → snapshot → patch cache → roll back
+	// visibly on error → invalidate on settle. The server is the authority;
+	// the patch only previews the same cancelled state it will return.
+	const cancel = api.reservation.cancel.useMutation({
+		async onMutate({ reservationId }) {
+			await utils.reservation.list.cancel();
+			const previous = utils.reservation.list.getData();
+			utils.reservation.list.setData(undefined, (old) =>
+				old?.map((r) =>
+					r.id === reservationId ? { ...r, status: "cancelled" as const } : r,
+				),
+			);
+			return { previous };
+		},
+		onError(_error, _vars, context) {
+			utils.reservation.list.setData(undefined, context?.previous);
+			toast.error(historyCopy.cancelError);
+		},
+		onSuccess() {
+			toast.success(historyCopy.cancelled);
+		},
+	});
 
 	const { active, previous } = useMemo(() => {
-		const views = reservations
-			.map((reservation) => {
-				const restaurant = mockRestaurantViewsById[reservation.restaurantId];
-				return toReservationView(
-					reservation,
-					restaurant && {
-						name: restaurant.name,
-						image: restaurant.images[0] ?? null,
-					},
-				);
-			})
-			.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+		const views = [...reservations].sort(
+			(a, b) => b.startTime.getTime() - a.startTime.getTime(),
+		);
 		return {
 			active: views.filter((v) => ACTIVE_STATUSES.includes(v.status)),
 			previous: views.filter((v) => !ACTIVE_STATUSES.includes(v.status)),
 		};
 	}, [reservations]);
 
-	function handleCancel(id: string) {
-		cancelReservation(id);
-		toast.success(historyCopy.cancelled);
+	function handleCancel(reservation: ReservationView) {
+		cancel.mutate(
+			{ reservationId: reservation.id },
+			{
+				async onSettled() {
+					await Promise.all([
+						utils.reservation.list.invalidate(),
+						utils.restaurant.availability.invalidate({
+							restaurantId: reservation.restaurantId,
+						}),
+					]);
+				},
+			},
+		);
 	}
 
 	return (
@@ -87,7 +111,7 @@ export function ReservationHistory() {
 						{active.map((r) => (
 							<ReservationCard
 								key={r.id}
-								onCancel={() => handleCancel(r.id)}
+								onCancel={() => handleCancel(r)}
 								reservation={r}
 							/>
 						))}
@@ -124,7 +148,7 @@ function ReservationCard({
 	return (
 		<article className="flex flex-col gap-4 rounded-[var(--radius)] border border-[var(--border)] bg-surface p-5 sm:flex-row sm:items-center">
 			{reservation.restaurantImage && (
-				// biome-ignore lint/performance/noImgElement: mock object/remote urls
+				// biome-ignore lint/performance/noImgElement: remote/object storage urls
 				<img
 					alt={reservation.restaurantName}
 					className="h-20 w-full rounded-[var(--radius-sm)] object-cover sm:h-20 sm:w-28"
