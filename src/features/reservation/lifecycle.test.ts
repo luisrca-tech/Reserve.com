@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_LIFECYCLE_CONFIG, nextStates } from "./lifecycle";
+import { DEFAULT_LIFECYCLE_CONFIG, nextStates, validate } from "./lifecycle";
 import type { MockReservation } from "./types";
 
 const T0 = new Date("2026-06-02T18:00:00.000Z").getTime();
@@ -165,5 +165,38 @@ describe("nextStates — reminder boundary", () => {
 			autoConfirm: noAutoConfirm,
 		});
 		expect(reminders).toEqual([]);
+	});
+});
+
+describe("validate — the single owner validate transition", () => {
+	const now = new Date(T0 + 60 * 1000);
+
+	it("moves a pending reservation to confirmed and stamps validatedAt", () => {
+		const next = validate(resv({ id: "p1", status: "pending" }), now);
+		expect(next.status).toBe("confirmed");
+		expect(next.validatedAt?.getTime()).toBe(now.getTime());
+	});
+
+	it("leaves a cancelled reservation untouched (no forced confirm)", () => {
+		const cancelled = resv({
+			id: "x1",
+			status: "cancelled",
+			cancelledAt: new Date(T0),
+		});
+		expect(validate(cancelled, now)).toBe(cancelled);
+	});
+
+	it("is idempotent for an already-confirmed reservation", () => {
+		const confirmed = resv({
+			id: "c1",
+			status: "confirmed",
+			validatedAt: new Date(T0),
+		});
+		expect(validate(confirmed, now)).toBe(confirmed);
+	});
+
+	it("does not resurrect an expired reservation", () => {
+		const expired = resv({ id: "e1", status: "expired" });
+		expect(validate(expired, now)).toBe(expired);
 	});
 });

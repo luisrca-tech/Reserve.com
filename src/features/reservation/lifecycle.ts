@@ -75,3 +75,14 @@ export function nextStates(input: LifecycleInput): LifecycleResult {
 
 	return { reservations: next, transitions, reminders };
 }
+
+/**
+ * The single definition of an owner validating a reservation:
+ * `pending → confirmed`. Any non-pending reservation is returned unchanged
+ * (same reference) so callers route validation through here instead of
+ * hand-mutating status. React-free and pure.
+ */
+export function validate(r: MockReservation, now: Date): MockReservation {
+	if (r.status !== "pending") return r;
+	return { ...r, status: "confirmed", validatedAt: now };
+}

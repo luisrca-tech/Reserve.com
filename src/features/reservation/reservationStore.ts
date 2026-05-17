@@ -1,5 +1,5 @@
 import type { AvailabilityContext } from "./Availability";
-import type { LifecycleConfig } from "./lifecycle";
+import { type LifecycleConfig, validate } from "./lifecycle";
 import { mockReservations } from "./mock/reservations";
 import {
 	type ReservationStateResult,
@@ -116,15 +116,21 @@ export function createReservationStore(
 	function owner(restaurantId: string): OwnerReservationScope {
 		return {
 			list() {
-				return reservations.filter((r) => r.restaurantId === restaurantId);
+				// A client-cancelled reservation propagates here: cancelled rows
+				// drop out of the owner's working list (they stay in the store
+				// for capacity/audit, but the owner no longer acts on them).
+				return reservations.filter(
+					(r) => r.restaurantId === restaurantId && r.status !== "cancelled",
+				);
 			},
 			validateReservation(id, now) {
+				// Route through the single lifecycle transition — no direct
+				// status mutation here. `validate` is the one definition of a
+				// valid owner confirmation (pending → confirmed only).
 				setReservations(
 					reservations.map((r) =>
-						r.id === id &&
-						r.restaurantId === restaurantId &&
-						r.status === "pending"
-							? { ...r, status: "confirmed", validatedAt: now }
+						r.id === id && r.restaurantId === restaurantId
+							? validate(r, now)
 							: r,
 					),
 				);

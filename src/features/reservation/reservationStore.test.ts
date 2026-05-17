@@ -163,16 +163,14 @@ describe("createReservationStore — owner mutations", () => {
 		expect(updated?.validatedAt).toEqual(T0);
 	});
 
-	it("cancelReservation frees the slot and is visible to the owner", () => {
+	it("a client-cancelled reservation disappears from the owner's list", () => {
 		const store = createReservationStore([
 			resv({ id: "a", userId: "u1", restaurantId: "r1" }),
 		]);
 
 		store.client("u1").cancelReservation("a", T0);
 
-		const updated = store.owner("r1").list()[0];
-		expect(updated?.status).toBe("cancelled");
-		expect(updated?.cancelledAt).toEqual(T0);
+		expect(store.owner("r1").list()).toEqual([]);
 	});
 
 	it("applyTick auto-confirms due reservations and reports transitions", () => {
@@ -204,6 +202,109 @@ describe("createReservationStore — owner mutations", () => {
 		store.owner("r1").applyTick(context({ autoConfirmEnabled: true }), T0);
 
 		expect(store.owner("r2").list()[0]?.status).toBe("pending");
+	});
+});
+
+describe("createReservationStore — Phase 5b: cross-store gaps closed", () => {
+	it("an owner-confirmed reservation a client cancels leaves the owner's list", () => {
+		const store = createReservationStore([
+			resv({ id: "a", userId: "u1", restaurantId: "r1", status: "pending" }),
+		]);
+
+		store.owner("r1").validateReservation("a", T0);
+		expect(store.owner("r1").list()).toHaveLength(1);
+
+		store.client("u1").cancelReservation("a", new Date(T0.getTime() + 1000));
+
+		expect(store.owner("r1").list()).toEqual([]);
+	});
+
+	it("owner validation flows through the lifecycle rule, not a blind write", () => {
+		const store = createReservationStore([
+			resv({ id: "a", userId: "u1", restaurantId: "r1", status: "expired" }),
+		]);
+
+		store.owner("r1").validateReservation("a", T0);
+
+		// lifecycle.validate refuses non-pending transitions, so an expired
+		// hold is never force-confirmed by the owner action.
+		expect(store.owner("r1").list()[0]?.status).toBe("expired");
+	});
+
+	it("validating an already-confirmed reservation is idempotent", () => {
+		const store = createReservationStore([
+			resv({
+				id: "a",
+				userId: "u1",
+				restaurantId: "r1",
+				status: "confirmed",
+				validatedAt: T0,
+			}),
+		]);
+
+		store.owner("r1").validateReservation("a", new Date(T0.getTime() + 5000));
+
+		const updated = store.owner("r1").list()[0];
+		expect(updated?.status).toBe("confirmed");
+		expect(updated?.validatedAt).toEqual(T0);
+	});
+});
+
+describe("createReservationStore — end-to-end client→owner lifecycle", () => {
+	// One coherent set: create (client) → validate (owner, via lifecycle) →
+	// cancel (client) → propagates out of the owner's list. No reload, no
+	// cross-store desync.
+	it("create → owner-validate → client-cancel propagates across roles", () => {
+		const store = createReservationStore([]);
+		const startTime = new Date(T0.getTime() + 6 * 3_600_000);
+
+		const created = store.client("u1").addReservation(
+			{
+				userId: "u1",
+				restaurantId: "r1",
+				startTime,
+				partySize: 2,
+				tableCount: 1,
+				autoConfirm: false,
+			},
+			T0,
+		);
+		expect(created.status).toBe("pending");
+		expect(store.owner("r1").list()[0]?.id).toBe(created.id);
+
+		store
+			.owner("r1")
+			.validateReservation(created.id, new Date(T0.getTime() + 1000));
+		expect(store.owner("r1").list()[0]?.status).toBe("confirmed");
+		expect(store.client("u1").list()[0]?.status).toBe("confirmed");
+
+		store
+			.client("u1")
+			.cancelReservation(created.id, new Date(T0.getTime() + 2000));
+		expect(store.owner("r1").list()).toEqual([]);
+		expect(store.client("u1").list()[0]?.status).toBe("cancelled");
+	});
+
+	it("create with auto-confirm → owner sees it confirmed → client-cancel propagates", () => {
+		const store = createReservationStore([]);
+
+		const created = store.client("u1").addReservation(
+			{
+				userId: "u1",
+				restaurantId: "r1",
+				startTime: new Date(T0.getTime() + 6 * 3_600_000),
+				partySize: 2,
+				tableCount: 1,
+				autoConfirm: true,
+			},
+			T0,
+		);
+		expect(store.owner("r1").list()[0]?.status).toBe("confirmed");
+
+		store
+			.client("u1")
+			.cancelReservation(created.id, new Date(T0.getTime() + 1000));
+		expect(store.owner("r1").list()).toEqual([]);
 	});
 });
 
