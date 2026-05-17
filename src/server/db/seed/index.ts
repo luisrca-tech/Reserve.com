@@ -4,6 +4,7 @@ import postgres from "postgres";
 import * as schema from "../schema";
 import { seedCategories } from "./categories";
 import { assertNotProduction } from "./productionGuard";
+import { seedReservations } from "./reservations";
 import { seedRestaurants } from "./restaurants";
 import { seedUsers } from "./users";
 
@@ -19,6 +20,7 @@ const SEEDERS: ReadonlyArray<{ name: string; run: Seeder }> = [
 	{ name: "categories", run: seedCategories },
 	{ name: "users", run: seedUsers },
 	{ name: "restaurants", run: seedRestaurants },
+	{ name: "reservations", run: seedReservations },
 ];
 
 async function main(): Promise<void> {
