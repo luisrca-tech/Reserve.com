@@ -1,7 +1,10 @@
 import { createTRPCRouter } from "~/server/api/trpc";
+import { listCategories } from "./queries";
 
 /**
- * Skeleton. Procedures land under `queries/` and `mutations/` and are
- * composed flat here (path stays `category.<procedure>`). Wired in P1b.
+ * `queries/` and `mutations/` are organisational only — procedures are
+ * composed flat here so tRPC call paths stay `category.<procedure>`.
  */
-export const categoryRouter = createTRPCRouter({});
+export const categoryRouter = createTRPCRouter({
+	list: listCategories,
+});

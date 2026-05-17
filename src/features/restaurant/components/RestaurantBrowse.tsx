@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "~/trpc/react";
 import { browseCopy } from "../copy";
-import { mockCategories } from "../mock/categories";
-import { mockRestaurantViews } from "../mock/restaurants";
 import type { RestaurantView } from "../types";
 import { useBrowse } from "./RestaurantBrowseContext";
 import { RestaurantCard } from "./RestaurantCard";
@@ -24,6 +23,8 @@ function matches(r: RestaurantView, q: string): boolean {
 
 export function RestaurantBrowse() {
 	const { query } = useBrowse();
+	const [restaurants] = api.restaurant.list.useSuspenseQuery();
+	const [categories] = api.category.list.useSuspenseQuery();
 	const [categoryId, setCategoryId] = useState<string | "all">("all");
 	const [visible, setVisible] = useState(INITIAL_PAGE);
 	const [loadingMore, setLoadingMore] = useState(false);
@@ -31,12 +32,12 @@ export function RestaurantBrowse() {
 
 	const filtered = useMemo(
 		() =>
-			mockRestaurantViews.filter(
+			restaurants.filter(
 				(r) =>
 					(categoryId === "all" || r.categoryId === categoryId) &&
 					matches(r, query),
 			),
-		[categoryId, query],
+		[restaurants, categoryId, query],
 	);
 
 	const filterKey = `${categoryId}|${query}`;
@@ -80,7 +81,7 @@ export function RestaurantBrowse() {
 				>
 					{browseCopy.filterAll}
 				</button>
-				{mockCategories.map((cat) => (
+				{categories.map((cat) => (
 					<button
 						className={chipClass(categoryId === cat.id)}
 						key={cat.id}
