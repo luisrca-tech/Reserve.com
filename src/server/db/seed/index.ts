@@ -4,6 +4,7 @@ import postgres from "postgres";
 import * as schema from "../schema";
 import { seedCategories } from "./categories";
 import { assertNotProduction } from "./productionGuard";
+import { seedRestaurants } from "./restaurants";
 import { seedUsers } from "./users";
 
 type Database = ReturnType<typeof drizzle<typeof schema>>;
@@ -17,6 +18,7 @@ type Seeder = (db: Database) => Promise<void>;
 const SEEDERS: ReadonlyArray<{ name: string; run: Seeder }> = [
 	{ name: "categories", run: seedCategories },
 	{ name: "users", run: seedUsers },
+	{ name: "restaurants", run: seedRestaurants },
 ];
 
 async function main(): Promise<void> {
@@ -34,9 +36,7 @@ async function main(): Promise<void> {
 
 	if (requested && toRun.length === 0) {
 		const available = SEEDERS.map((s) => s.name).join(", ");
-		throw new Error(
-			`Unknown seeder "${requested}". Available: ${available}.`,
-		);
+		throw new Error(`Unknown seeder "${requested}". Available: ${available}.`);
 	}
 
 	const conn = postgres(databaseUrl, { max: 1 });
