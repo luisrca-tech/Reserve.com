@@ -86,6 +86,79 @@ export function buildAvailabilityRows(
 	return rows;
 }
 
+/** A single weekday row as edited in the form (closed days kept for the UI). */
+export interface DaySchedule {
+	open: boolean;
+	openHour: number;
+	closeHour: number;
+}
+
+/** Raw form state, before serialization into an {@link OnboardingDraft}. */
+export interface OnboardingFormState {
+	name: string;
+	corporateEmail: string;
+	phone: string;
+	address: string;
+	bio: string;
+	category: CategoryResolution;
+	tableCount: number;
+	schedule: DaySchedule[];
+	imageCount: number;
+	hasMenu: boolean;
+}
+
+/** Seven closed weekdays with sensible default opening bounds. */
+export function emptySchedule(): DaySchedule[] {
+	return Array.from({ length: 7 }, () => ({
+		open: false,
+		openHour: 18,
+		closeHour: 23,
+	}));
+}
+
+/** Drop closed days and project the rest onto weekday-indexed rows. */
+export function normalizeSchedule(schedule: DaySchedule[]): WeekdaySchedule[] {
+	return schedule.flatMap((d, weekday) =>
+		d.open ? [{ weekday, openHour: d.openHour, closeHour: d.closeHour }] : [],
+	);
+}
+
+/** Single place that turns raw form state into a validated-shape draft. */
+export function buildOnboardingDraft(
+	state: OnboardingFormState,
+): OnboardingDraft {
+	return {
+		name: state.name,
+		corporateEmail: state.corporateEmail,
+		phone: state.phone,
+		address: state.address,
+		bio: state.bio,
+		categoryId:
+			state.category.kind === "existing" ? state.category.category.id : null,
+		newCategoryName: state.category.kind === "new" ? state.category.name : null,
+		tableCount: state.tableCount,
+		schedule: normalizeSchedule(state.schedule),
+		imageCount: state.imageCount,
+		hasMenu: state.hasMenu,
+	};
+}
+
+/** Which validation errors belong to each onboarding step, in order. */
+export const onboardingStepFields: readonly (readonly OnboardingError[])[] = [
+	["name", "corporateEmail", "phone", "address", "bio"],
+	["category"],
+	["tableCount", "schedule"],
+	["images"],
+	["menu"],
+];
+
+/** Per-step pass/fail derived from the flat error list. */
+export function stepValidity(errors: OnboardingError[]): boolean[] {
+	return onboardingStepFields.map((fields) =>
+		fields.every((f) => !errors.includes(f)),
+	);
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Returns the list of failing fields; empty means the draft is submittable. */

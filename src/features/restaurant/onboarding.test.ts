@@ -3,9 +3,15 @@ import { describe, expect, it } from "vitest";
 import type { Category } from "~/server/db/schema/types";
 import {
 	buildAvailabilityRows,
+	buildOnboardingDraft,
+	emptySchedule,
 	normalizeCategoryName,
+	normalizeSchedule,
 	type OnboardingDraft,
+	type OnboardingFormState,
+	onboardingStepFields,
 	resolveCategory,
+	stepValidity,
 	validateOnboarding,
 } from "./onboarding";
 
@@ -138,5 +144,109 @@ describe("validateOnboarding", () => {
 
 	it("requires a menu upload", () => {
 		expect(validateOnboarding(draft({ hasMenu: false }))).toContain("menu");
+	});
+});
+
+describe("emptySchedule", () => {
+	it("returns seven closed weekdays with default 18–23 bounds", () => {
+		const s = emptySchedule();
+		expect(s).toHaveLength(7);
+		expect(s.every((d) => d.open === false)).toBe(true);
+		expect(s[0]).toEqual({ open: false, openHour: 18, closeHour: 23 });
+	});
+});
+
+describe("normalizeSchedule", () => {
+	it("keeps only open days and projects them to weekday-indexed rows", () => {
+		const schedule = emptySchedule();
+		schedule[2] = { open: true, openHour: 18, closeHour: 23 };
+		schedule[5] = { open: true, openHour: 12, closeHour: 15 };
+		expect(normalizeSchedule(schedule)).toEqual([
+			{ weekday: 2, openHour: 18, closeHour: 23 },
+			{ weekday: 5, openHour: 12, closeHour: 15 },
+		]);
+	});
+
+	it("returns no rows when every day is closed", () => {
+		expect(normalizeSchedule(emptySchedule())).toEqual([]);
+	});
+});
+
+function formState(
+	overrides: Partial<OnboardingFormState> = {},
+): OnboardingFormState {
+	const schedule = emptySchedule();
+	schedule[2] = { open: true, openHour: 18, closeHour: 23 };
+	return {
+		name: "Cantina Nova",
+		corporateEmail: "contato@cantinanova.com",
+		phone: "(11) 3000-0000",
+		address: "Rua A, 1 — São Paulo, SP",
+		bio: "Um cantinho aconchegante.",
+		category: { kind: "existing", category: categories[0] as Category },
+		tableCount: 12,
+		schedule,
+		imageCount: 4,
+		hasMenu: true,
+		...overrides,
+	};
+}
+
+describe("buildOnboardingDraft", () => {
+	it("assembles a submittable draft from raw form state", () => {
+		expect(validateOnboarding(buildOnboardingDraft(formState()))).toEqual([]);
+	});
+
+	it("maps an existing category resolution to categoryId", () => {
+		const d = buildOnboardingDraft(formState());
+		expect(d.categoryId).toBe("cat_italiana");
+		expect(d.newCategoryName).toBeNull();
+	});
+
+	it("maps a new category resolution to newCategoryName", () => {
+		const d = buildOnboardingDraft(
+			formState({ category: { kind: "new", name: "Peruana" } }),
+		);
+		expect(d.categoryId).toBeNull();
+		expect(d.newCategoryName).toBe("Peruana");
+	});
+
+	it("treats an empty category resolution as no category", () => {
+		const d = buildOnboardingDraft(formState({ category: { kind: "empty" } }));
+		expect(d.categoryId).toBeNull();
+		expect(d.newCategoryName).toBeNull();
+	});
+
+	it("normalizes the schedule and derives image/menu flags", () => {
+		const d = buildOnboardingDraft(
+			formState({ imageCount: 0, hasMenu: false }),
+		);
+		expect(d.schedule).toEqual([{ weekday: 2, openHour: 18, closeHour: 23 }]);
+		expect(d.imageCount).toBe(0);
+		expect(d.hasMenu).toBe(false);
+	});
+});
+
+describe("step validity", () => {
+	it("groups errors under the five onboarding steps", () => {
+		expect(onboardingStepFields).toEqual([
+			["name", "corporateEmail", "phone", "address", "bio"],
+			["category"],
+			["tableCount", "schedule"],
+			["images"],
+			["menu"],
+		]);
+	});
+
+	it("marks a step invalid when any of its fields fails", () => {
+		expect(stepValidity([])).toEqual([true, true, true, true, true]);
+		expect(stepValidity(["phone"])).toEqual([false, true, true, true, true]);
+		expect(stepValidity(["schedule", "menu"])).toEqual([
+			true,
+			true,
+			false,
+			true,
+			false,
+		]);
 	});
 });

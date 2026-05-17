@@ -10,161 +10,20 @@ import {
 	Upload,
 	X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
 import { Label } from "~/components/ui/Label";
 import { Textarea } from "~/components/ui/Textarea";
-import { useAuth } from "~/features/auth/MockAuthContext";
 import { onboardingCopy as t } from "../copy";
-import { mockCategories } from "../mock/categories";
-import {
-	type CategoryResolution,
-	type OnboardingDraft,
-	type OnboardingError,
-	resolveCategory,
-	validateOnboarding,
-} from "../onboarding";
+import type { DaySchedule } from "../onboarding";
+import { useOnboardingForm } from "../useOnboardingForm";
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
-interface DaySchedule {
-	open: boolean;
-	openHour: number;
-	closeHour: number;
-}
-
-interface UploadedImage {
-	id: string;
-	name: string;
-	url: string;
-}
-
-function emptySchedule(): DaySchedule[] {
-	return Array.from({ length: 7 }, () => ({
-		open: false,
-		openHour: 18,
-		closeHour: 23,
-	}));
-}
-
-let uploadSeq = 0;
-
 export function OnboardingFlow() {
-	const router = useRouter();
-	const { completeOnboarding } = useAuth();
-
-	const [step, setStep] = useState(0);
-	const [submitting, setSubmitting] = useState(false);
-
-	const [name, setName] = useState("");
-	const [corporateEmail, setCorporateEmail] = useState("");
-	const [phone, setPhone] = useState("");
-	const [address, setAddress] = useState("");
-	const [bio, setBio] = useState("");
-
-	const [categoryQuery, setCategoryQuery] = useState("");
-	const resolution: CategoryResolution = useMemo(
-		() => resolveCategory(categoryQuery, mockCategories),
-		[categoryQuery],
-	);
-	const matches = useMemo(() => {
-		const q = categoryQuery.trim().toLowerCase();
-		if (q === "") return mockCategories;
-		return mockCategories.filter((c) => c.name.toLowerCase().includes(q));
-	}, [categoryQuery]);
-
-	const [tableCount, setTableCount] = useState(10);
-	const [schedule, setSchedule] = useState<DaySchedule[]>(emptySchedule);
-
-	const [images, setImages] = useState<UploadedImage[]>([]);
-	const [menuName, setMenuName] = useState<string | null>(null);
-	const imageInputRef = useRef<HTMLInputElement>(null);
-	const menuInputRef = useRef<HTMLInputElement>(null);
-
-	const draft: OnboardingDraft = {
-		name,
-		corporateEmail,
-		phone,
-		address,
-		bio,
-		categoryId: resolution.kind === "existing" ? resolution.category.id : null,
-		newCategoryName: resolution.kind === "new" ? resolution.name : null,
-		tableCount,
-		schedule: schedule
-			.map((d, weekday) => ({
-				weekday,
-				openHour: d.openHour,
-				closeHour: d.closeHour,
-				open: d.open,
-			}))
-			.filter((d) => d.open)
-			.map(({ weekday, openHour, closeHour }) => ({
-				weekday,
-				openHour,
-				closeHour,
-			})),
-		imageCount: images.length,
-		hasMenu: menuName !== null,
-	};
-
-	const errors = validateOnboarding(draft);
-	const has = (e: OnboardingError) => errors.includes(e);
-
-	function setDay(weekday: number, patch: Partial<DaySchedule>) {
-		setSchedule((prev) =>
-			prev.map((d, i) => (i === weekday ? { ...d, ...patch } : d)),
-		);
-	}
-
-	function onPickImages(files: FileList | null) {
-		if (!files) return;
-		const added: UploadedImage[] = Array.from(files).map((file) => {
-			uploadSeq += 1;
-			return {
-				id: `upl_${uploadSeq}`,
-				name: file.name,
-				url: URL.createObjectURL(file),
-			};
-		});
-		setImages((prev) => [...prev, ...added]);
-	}
-
-	function removeImage(id: string) {
-		setImages((prev) => {
-			const target = prev.find((i) => i.id === id);
-			if (target) URL.revokeObjectURL(target.url);
-			return prev.filter((i) => i.id !== id);
-		});
-	}
-
-	function submit() {
-		if (errors.length > 0) {
-			toast.error(t.validationError);
-			return;
-		}
-		setSubmitting(true);
-		completeOnboarding();
-		toast.success(t.success);
-		router.push("/owner/overview");
-	}
-
-	const stepValid = [
-		!has("name") &&
-			!has("corporateEmail") &&
-			!has("phone") &&
-			!has("address") &&
-			!has("bio"),
-		!has("category"),
-		!has("tableCount") && !has("schedule"),
-		!has("images"),
-		!has("menu"),
-	];
-
-	const isLast = step === t.steps.length - 1;
+	const f = useOnboardingForm();
+	const { step, has, resolution, matches } = f;
 
 	return (
 		<div className="mx-auto w-full max-w-2xl px-4 py-10">
@@ -211,46 +70,46 @@ export function OnboardingFlow() {
 							<Label htmlFor="ob-name">{t.nameLabel}</Label>
 							<Input
 								id="ob-name"
-								onChange={(e) => setName(e.target.value)}
+								onChange={(e) => f.setName(e.target.value)}
 								placeholder={t.namePlaceholder}
-								value={name}
+								value={f.name}
 							/>
 						</Field>
 						<Field error={has("corporateEmail")}>
 							<Label htmlFor="ob-email">{t.corporateEmailLabel}</Label>
 							<Input
 								id="ob-email"
-								onChange={(e) => setCorporateEmail(e.target.value)}
+								onChange={(e) => f.setCorporateEmail(e.target.value)}
 								placeholder={t.corporateEmailPlaceholder}
 								type="email"
-								value={corporateEmail}
+								value={f.corporateEmail}
 							/>
 						</Field>
 						<Field error={has("phone")}>
 							<Label htmlFor="ob-phone">{t.phoneLabel}</Label>
 							<Input
 								id="ob-phone"
-								onChange={(e) => setPhone(e.target.value)}
+								onChange={(e) => f.setPhone(e.target.value)}
 								placeholder={t.phonePlaceholder}
-								value={phone}
+								value={f.phone}
 							/>
 						</Field>
 						<Field error={has("address")}>
 							<Label htmlFor="ob-address">{t.addressLabel}</Label>
 							<Input
 								id="ob-address"
-								onChange={(e) => setAddress(e.target.value)}
+								onChange={(e) => f.setAddress(e.target.value)}
 								placeholder={t.addressPlaceholder}
-								value={address}
+								value={f.address}
 							/>
 						</Field>
 						<Field error={has("bio")}>
 							<Label htmlFor="ob-bio">{t.bioLabel}</Label>
 							<Textarea
 								id="ob-bio"
-								onChange={(e) => setBio(e.target.value)}
+								onChange={(e) => f.setBio(e.target.value)}
 								placeholder={t.bioPlaceholder}
-								value={bio}
+								value={f.bio}
 							/>
 						</Field>
 					</section>
@@ -269,9 +128,9 @@ export function OnboardingFlow() {
 							/>
 							<Input
 								className="pl-9"
-								onChange={(e) => setCategoryQuery(e.target.value)}
+								onChange={(e) => f.setCategoryQuery(e.target.value)}
 								placeholder={t.categorySearchPlaceholder}
-								value={categoryQuery}
+								value={f.categoryQuery}
 							/>
 						</div>
 
@@ -288,7 +147,7 @@ export function OnboardingFlow() {
 												: "border-[var(--border)] text-text hover:border-accent"
 										}`}
 										key={c.id}
-										onClick={() => setCategoryQuery(c.name)}
+										onClick={() => f.setCategoryQuery(c.name)}
 										type="button"
 									>
 										{c.name}
@@ -323,17 +182,17 @@ export function OnboardingFlow() {
 						<div>
 							<Label>{t.tableCountLabel}</Label>
 							<Stepper
-								label={t.tableCountValue(tableCount)}
+								label={t.tableCountValue(f.tableCount)}
 								min={1}
-								onChange={setTableCount}
-								value={tableCount}
+								onChange={f.setTableCount}
+								value={f.tableCount}
 							/>
 						</div>
 						<div>
 							<Label>{t.hoursLabel}</Label>
 							<div className="space-y-2">
 								{t.weekdayNames.map((dayName, weekday) => {
-									const day = schedule[weekday] as DaySchedule;
+									const day = f.schedule[weekday] as DaySchedule;
 									return (
 										<div
 											className="flex flex-wrap items-center gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-surface2 px-4 py-3"
@@ -345,7 +204,7 @@ export function OnboardingFlow() {
 														? "border-green bg-green-soft text-green"
 														: "border-[var(--border)] text-muted"
 												}`}
-												onClick={() => setDay(weekday, { open: !day.open })}
+												onClick={() => f.setDay(weekday, { open: !day.open })}
 												type="button"
 											>
 												{day.open ? t.open : t.closed}
@@ -357,12 +216,14 @@ export function OnboardingFlow() {
 												<div className="ml-auto flex items-center gap-2 text-[0.8rem] text-muted">
 													<span>{t.openHour}</span>
 													<HourSelect
-														onChange={(h) => setDay(weekday, { openHour: h })}
+														onChange={(h) => f.setDay(weekday, { openHour: h })}
 														value={day.openHour}
 													/>
 													<span>{t.closeHour}</span>
 													<HourSelect
-														onChange={(h) => setDay(weekday, { closeHour: h })}
+														onChange={(h) =>
+															f.setDay(weekday, { closeHour: h })
+														}
 														value={day.closeHour}
 													/>
 												</div>
@@ -391,14 +252,14 @@ export function OnboardingFlow() {
 							className="hidden"
 							multiple
 							onChange={(e) => {
-								onPickImages(e.target.files);
+								f.onPickImages(e.target.files);
 								e.target.value = "";
 							}}
-							ref={imageInputRef}
+							ref={f.imageInputRef}
 							type="file"
 						/>
 						<Button
-							onClick={() => imageInputRef.current?.click()}
+							onClick={() => f.imageInputRef.current?.click()}
 							type="button"
 							variant="secondary"
 						>
@@ -407,14 +268,14 @@ export function OnboardingFlow() {
 						</Button>
 						<p
 							className={`text-[0.85rem] ${
-								images.length >= 4 ? "text-green" : "text-muted"
+								f.images.length >= 4 ? "text-green" : "text-muted"
 							}`}
 						>
-							{t.imagesCount(images.length)}
+							{t.imagesCount(f.images.length)}
 						</p>
-						{images.length > 0 && (
+						{f.images.length > 0 && (
 							<div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-								{images.map((img) => (
+								{f.images.map((img) => (
 									<div
 										className="group relative aspect-square overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)]"
 										key={img.id}
@@ -427,7 +288,7 @@ export function OnboardingFlow() {
 										/>
 										<button
 											className="absolute top-1 right-1 rounded-full bg-bg/80 p-1 text-text opacity-0 transition-opacity group-hover:opacity-100"
-											onClick={() => removeImage(img.id)}
+											onClick={() => f.removeImage(img.id)}
 											title={t.imageRemove}
 											type="button"
 										>
@@ -451,27 +312,27 @@ export function OnboardingFlow() {
 							className="hidden"
 							onChange={(e) => {
 								const file = e.target.files?.[0];
-								if (file) setMenuName(file.name);
+								if (file) f.setMenuName(file.name);
 								e.target.value = "";
 							}}
-							ref={menuInputRef}
+							ref={f.menuInputRef}
 							type="file"
 						/>
 						<Button
-							onClick={() => menuInputRef.current?.click()}
+							onClick={() => f.menuInputRef.current?.click()}
 							type="button"
 							variant="secondary"
 						>
 							<Upload size={16} />
 							{t.menuPick}
 						</Button>
-						{menuName && (
+						{f.menuName && (
 							<div className="flex items-center gap-3 rounded-[var(--radius-sm)] border border-green border-dashed bg-green-soft px-4 py-3 text-[0.85rem] text-green">
 								<Check size={16} />
-								<span className="flex-1">{t.menuReady(menuName)}</span>
+								<span className="flex-1">{t.menuReady(f.menuName)}</span>
 								<button
 									className="text-muted hover:text-text"
-									onClick={() => setMenuName(null)}
+									onClick={() => f.setMenuName(null)}
 									type="button"
 								>
 									{t.menuRemove}
@@ -484,7 +345,7 @@ export function OnboardingFlow() {
 				<div className="mt-8 flex items-center justify-between border-[var(--border)] border-t pt-5">
 					<Button
 						disabled={step === 0}
-						onClick={() => setStep((s) => Math.max(0, s - 1))}
+						onClick={f.back}
 						type="button"
 						variant="ghost"
 					>
@@ -492,19 +353,19 @@ export function OnboardingFlow() {
 						{t.back}
 					</Button>
 
-					{isLast ? (
+					{f.isLast ? (
 						<Button
-							disabled={errors.length > 0 || submitting}
-							onClick={submit}
+							disabled={f.errors.length > 0 || f.submitting}
+							onClick={f.submit}
 							type="button"
 							variant="success"
 						>
-							{submitting ? t.submitting : t.submit}
+							{f.submitting ? t.submitting : t.submit}
 						</Button>
 					) : (
 						<Button
-							disabled={!stepValid[step]}
-							onClick={() => setStep((s) => s + 1)}
+							disabled={!f.stepValid[step]}
+							onClick={f.next}
 							type="button"
 						>
 							{t.next}
