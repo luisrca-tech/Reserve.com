@@ -1,34 +1,40 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { OWNER_WITH_RESTAURANT_ID } from "~/features/auth/mock/users";
+import type { SessionUser } from "~/features/auth/types";
 import { mockRestaurantRecords } from "~/features/restaurant/mock/restaurants";
-import { createSessionState, type SessionCookiePort } from "./sessionState";
-
-/** In-memory cookie port so the React-free core is testable in node. */
-function fakeCookies(): SessionCookiePort {
-	let session: string | null = null;
-	let onboarded = false;
-	return {
-		readSession: () => session,
-		writeSession: (id) => {
-			session = id;
-		},
-		clearSession: () => {
-			session = null;
-		},
-		readOnboarded: () => onboarded,
-		writeOnboarded: () => {
-			onboarded = true;
-		},
-		clearOnboarded: () => {
-			onboarded = false;
-		},
-	};
-}
+import { createSessionState } from "./sessionState";
 
 const BELLA_RESTAURANT_ID = mockRestaurantRecords.find(
 	(r) => r.restaurant.ownerId === OWNER_WITH_RESTAURANT_ID,
 )?.restaurant.id;
+
+const clientUser: SessionUser = {
+	id: "user_client_marcos",
+	name: "Marcos Andrade",
+	email: "client@reserve.test",
+	phone: "(11) 9 8888-0000",
+	role: "client",
+	hasRestaurant: false,
+};
+
+const ownerWithRestaurant: SessionUser = {
+	id: OWNER_WITH_RESTAURANT_ID,
+	name: "Beatriz Mello",
+	email: "owner@reserve.test",
+	phone: "(11) 3000-1000",
+	role: "restaurant_owner",
+	hasRestaurant: true,
+};
+
+const ownerWithoutRestaurant: SessionUser = {
+	id: "user_owner_new",
+	name: "Rafael Costa",
+	email: "rafael@novo.test",
+	phone: null,
+	role: "restaurant_owner",
+	hasRestaurant: false,
+};
 
 function baseGuest(userId: string) {
 	if (userId === "user_client_marcos")
@@ -37,65 +43,61 @@ function baseGuest(userId: string) {
 }
 
 function setup() {
-	return createSessionState({ cookies: fakeCookies(), baseGuest });
+	return createSessionState({ baseGuest });
 }
 
 describe("createSessionState — exposure", () => {
 	it("starts signed out", () => {
-		const s = setup();
-		expect(s.getSnapshot()).toEqual({
+		expect(setup().getSnapshot()).toEqual({
 			user: null,
 			role: null,
 			activeRestaurant: null,
 		});
 	});
 
-	it("login exposes user + role and writes the session cookie", () => {
-		const cookies = fakeCookies();
-		const s = createSessionState({ cookies, baseGuest });
-
-		const user = s.login("client");
-
-		expect(user.id).toBe("user_client_marcos");
+	it("setSessionUser exposes the real user + role", () => {
+		const s = setup();
+		s.setSessionUser(clientUser);
+		expect(s.getSnapshot().user?.id).toBe("user_client_marcos");
 		expect(s.getSnapshot().role).toBe("client");
-		expect(cookies.readSession()).toBe("user_client_marcos");
 	});
 
-	it("hydrate restores the user from the session cookie", () => {
-		const cookies = fakeCookies();
-		cookies.writeSession(OWNER_WITH_RESTAURANT_ID);
-		const s = createSessionState({ cookies, baseGuest });
-
-		s.hydrate();
-
-		expect(s.getSnapshot().user?.id).toBe(OWNER_WITH_RESTAURANT_ID);
+	it("setSessionUser(null) signs out", () => {
+		const s = setup();
+		s.setSessionUser(clientUser);
+		s.setSessionUser(null);
+		expect(s.getSnapshot()).toEqual({
+			user: null,
+			role: null,
+			activeRestaurant: null,
+		});
 	});
 });
 
 describe("createSessionState — active restaurant resolution", () => {
-	it("resolves the owner's managed restaurant (no owner-feature mapper)", () => {
+	it("resolves the owner's managed restaurant by ownerId", () => {
 		const s = setup();
-		s.login("ownerWithRestaurant");
+		s.setSessionUser(ownerWithRestaurant);
 		expect(s.getSnapshot().activeRestaurant?.id).toBe(BELLA_RESTAURANT_ID);
 	});
 
-	it("falls back to a seeded restaurant for an owner without one", () => {
+	it("falls back to a seeded restaurant for an owner without a mock record", () => {
 		const s = setup();
-		s.login("ownerWithoutRestaurant");
+		s.setSessionUser(ownerWithoutRestaurant);
 		expect(s.getSnapshot().activeRestaurant).not.toBeNull();
 	});
 
 	it("clients have no active restaurant", () => {
 		const s = setup();
-		s.login("client");
+		s.setSessionUser(clientUser);
 		expect(s.getSnapshot().activeRestaurant).toBeNull();
 	});
 });
 
-describe("createSessionState — profile/reservation desync", () => {
+describe("createSessionState — profile/reservation desync shim", () => {
 	it("a profile phone edit propagates to the owner's guest view", () => {
 		const s = setup();
-		s.login("client");
+		s.setSessionUser(clientUser);
 
 		expect(s.guestProfile("user_client_marcos").phone).toBe("(11) 9 8888-0000");
 
@@ -118,24 +120,31 @@ describe("createSessionState — profile/reservation desync", () => {
 	});
 });
 
-describe("createSessionState — onboarding", () => {
-	it("completeOnboarding promotes the owner and writes the cookie", () => {
-		const cookies = fakeCookies();
-		const s = createSessionState({ cookies, baseGuest });
-		s.login("ownerWithoutRestaurant");
+describe("createSessionState — onboarding shim", () => {
+	it("completeOnboarding promotes the owner locally", () => {
+		const s = setup();
+		s.setSessionUser(ownerWithoutRestaurant);
 
 		s.completeOnboarding();
 
 		expect(s.getSnapshot().user?.hasRestaurant).toBe(true);
-		expect(cookies.readOnboarded()).toBe(true);
+	});
+
+	it("a re-pushed session keeps the local onboarding promotion", () => {
+		const s = setup();
+		s.setSessionUser(ownerWithoutRestaurant);
+		s.completeOnboarding();
+
+		s.setSessionUser(ownerWithoutRestaurant);
+
+		expect(s.getSnapshot().user?.hasRestaurant).toBe(true);
 	});
 });
 
-describe("createSessionState — explicit logout cleanup", () => {
-	it("logout fully resets state and cookies, order-independent", () => {
-		const cookies = fakeCookies();
-		const s = createSessionState({ cookies, baseGuest });
-		s.login("client");
+describe("createSessionState — logout cleanup", () => {
+	it("logout fully resets state, order-independent", () => {
+		const s = setup();
+		s.setSessionUser(clientUser);
 		s.updateProfile({
 			name: "Marcos A.",
 			email: "marcos@email.com",
@@ -149,9 +158,22 @@ describe("createSessionState — explicit logout cleanup", () => {
 			role: null,
 			activeRestaurant: null,
 		});
-		expect(cookies.readSession()).toBeNull();
-		expect(cookies.readOnboarded()).toBe(false);
-		// Profile override is cleared too — guest view reverts to base.
+		expect(s.guestProfile("user_client_marcos")).toEqual(
+			baseGuest("user_client_marcos"),
+		);
+	});
+
+	it("switching to a different user clears the prior profile override", () => {
+		const s = setup();
+		s.setSessionUser(clientUser);
+		s.updateProfile({
+			name: "Marcos A.",
+			email: "marcos@email.com",
+			phone: "(11) 9 1234-5678",
+		});
+
+		s.setSessionUser(ownerWithRestaurant);
+
 		expect(s.guestProfile("user_client_marcos")).toEqual(
 			baseGuest("user_client_marcos"),
 		);
@@ -164,7 +186,7 @@ describe("createSessionState — subscription", () => {
 		const listener = vi.fn();
 		const unsubscribe = s.subscribe(listener);
 
-		s.login("client");
+		s.setSessionUser(clientUser);
 		expect(listener).toHaveBeenCalledTimes(1);
 
 		unsubscribe();

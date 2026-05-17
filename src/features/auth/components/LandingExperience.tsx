@@ -1,8 +1,10 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { LogIn, UtensilsCrossed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { type FieldError, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
@@ -16,38 +18,118 @@ import { Input } from "~/components/ui/Input";
 import { Label } from "~/components/ui/Label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import { Textarea } from "~/components/ui/Textarea";
-import {
-	redirectPathFor,
-	useSessionState,
-} from "~/features/session/SessionContext";
+import { redirectPathFor } from "~/features/session/SessionContext";
+import { authClient } from "~/server/better-auth/client";
+import { promoteToOwner } from "../actions";
 import { authCopy, landingCopy } from "../copy";
-import type { SeededUserKey } from "../types";
+import type { Role } from "../types";
+import {
+	type ClientRegisterValues,
+	clientRegisterSchema,
+	type LoginValues,
+	loginSchema,
+	type OwnerRegisterValues,
+	ownerRegisterSchema,
+} from "../validation";
 
 type DialogId = "login" | "loginRestaurant" | "register" | null;
 
+function FieldMessage({ error }: { error?: FieldError }) {
+	if (!error?.message) return null;
+	return <p className="mt-1 text-[0.78rem] text-red">{error.message}</p>;
+}
+
 export function LandingExperience() {
 	const router = useRouter();
-	const { login } = useSessionState();
 	const [openDialog, setOpenDialog] = useState<DialogId>(null);
 	const [registerTab, setRegisterTab] = useState<"client" | "restaurant">(
 		"client",
 	);
 
-	function authenticate(key: SeededUserKey, successMessage: string) {
-		try {
-			const user = login(key);
-			toast.success(successMessage);
-			setOpenDialog(null);
-			router.push(redirectPathFor(user));
-		} catch {
-			toast.error(authCopy.genericError);
-		}
+	const loginForm = useForm<LoginValues>({
+		resolver: zodResolver(loginSchema),
+		defaultValues: { email: "", password: "" },
+	});
+	const restaurantLoginForm = useForm<LoginValues>({
+		resolver: zodResolver(loginSchema),
+		defaultValues: { email: "", password: "" },
+	});
+	const clientRegisterForm = useForm<ClientRegisterValues>({
+		resolver: zodResolver(clientRegisterSchema),
+		defaultValues: { name: "", email: "", phone: "", password: "" },
+	});
+	const ownerRegisterForm = useForm<OwnerRegisterValues>({
+		resolver: zodResolver(ownerRegisterSchema),
+		defaultValues: {
+			restaurantName: "",
+			corporateEmail: "",
+			phone: "",
+			address: "",
+			bio: "",
+			password: "",
+		},
+	});
+
+	function go(role: Role, successMessage: string) {
+		toast.success(successMessage);
+		setOpenDialog(null);
+		router.push(redirectPathFor(role));
+		router.refresh();
 	}
 
 	function openRegister(tab: "client" | "restaurant") {
 		setRegisterTab(tab);
 		setOpenDialog("register");
 	}
+
+	const onLogin = (form: typeof loginForm) =>
+		form.handleSubmit(async ({ email, password }) => {
+			const { data, error } = await authClient.signIn.email({
+				email,
+				password,
+			});
+			if (error || !data) {
+				form.setError("password", { message: authCopy.invalidCredentials });
+				return;
+			}
+			const role = (data.user.role ?? "client") as Role;
+			go(role, authCopy.loginSuccess);
+		});
+
+	const onRegisterClient = clientRegisterForm.handleSubmit(
+		async ({ name, email, password }) => {
+			const { error } = await authClient.signUp.email({
+				email,
+				password,
+				name,
+			});
+			if (error) {
+				clientRegisterForm.setError("email", {
+					message: authCopy.emailTaken,
+				});
+				return;
+			}
+			go("client", authCopy.registerClientSuccess);
+		},
+	);
+
+	const onRegisterOwner = ownerRegisterForm.handleSubmit(
+		async ({ restaurantName, corporateEmail, password }) => {
+			const { error } = await authClient.signUp.email({
+				email: corporateEmail,
+				password,
+				name: restaurantName,
+			});
+			if (error) {
+				ownerRegisterForm.setError("corporateEmail", {
+					message: authCopy.emailTaken,
+				});
+				return;
+			}
+			await promoteToOwner();
+			go("restaurant_owner", authCopy.registerRestaurantSuccess);
+		},
+	);
 
 	return (
 		<div className="flex min-h-screen flex-col">
@@ -137,19 +219,16 @@ export function LandingExperience() {
 					<DialogHeader>
 						<DialogTitle>{authCopy.loginClientTitle}</DialogTitle>
 					</DialogHeader>
-					<form
-						onSubmit={(e) => {
-							e.preventDefault();
-							authenticate("client", authCopy.loginSuccess);
-						}}
-					>
+					<form onSubmit={onLogin(loginForm)}>
 						<div className="mb-5">
 							<Label htmlFor="loginEmail">{authCopy.emailLabel}</Label>
 							<Input
 								id="loginEmail"
 								placeholder={authCopy.emailPlaceholder}
 								type="email"
+								{...loginForm.register("email")}
 							/>
+							<FieldMessage error={loginForm.formState.errors.email} />
 						</div>
 						<div className="mb-5">
 							<Label htmlFor="loginPass">{authCopy.passwordLabel}</Label>
@@ -157,9 +236,16 @@ export function LandingExperience() {
 								id="loginPass"
 								placeholder={authCopy.passwordPlaceholder}
 								type="password"
+								{...loginForm.register("password")}
 							/>
+							<FieldMessage error={loginForm.formState.errors.password} />
 						</div>
-						<Button full size="lg" type="submit">
+						<Button
+							disabled={loginForm.formState.isSubmitting}
+							full
+							size="lg"
+							type="submit"
+						>
 							{authCopy.loginClientSubmit}
 						</Button>
 					</form>
@@ -187,12 +273,7 @@ export function LandingExperience() {
 					<DialogHeader>
 						<DialogTitle>{authCopy.loginRestaurantTitle}</DialogTitle>
 					</DialogHeader>
-					<form
-						onSubmit={(e) => {
-							e.preventDefault();
-							authenticate("ownerWithRestaurant", authCopy.loginSuccess);
-						}}
-					>
+					<form onSubmit={onLogin(restaurantLoginForm)}>
 						<div className="mb-5">
 							<Label htmlFor="restLoginEmail">
 								{authCopy.corporateEmailLabel}
@@ -201,6 +282,10 @@ export function LandingExperience() {
 								id="restLoginEmail"
 								placeholder={authCopy.corporateEmailPlaceholder}
 								type="email"
+								{...restaurantLoginForm.register("email")}
+							/>
+							<FieldMessage
+								error={restaurantLoginForm.formState.errors.email}
 							/>
 						</div>
 						<div className="mb-5">
@@ -209,9 +294,18 @@ export function LandingExperience() {
 								id="restLoginPass"
 								placeholder={authCopy.passwordPlaceholder}
 								type="password"
+								{...restaurantLoginForm.register("password")}
+							/>
+							<FieldMessage
+								error={restaurantLoginForm.formState.errors.password}
 							/>
 						</div>
-						<Button full size="lg" type="submit">
+						<Button
+							disabled={restaurantLoginForm.formState.isSubmitting}
+							full
+							size="lg"
+							type="submit"
+						>
 							{authCopy.loginRestaurantSubmit}
 						</Button>
 					</form>
@@ -251,50 +345,84 @@ export function LandingExperience() {
 						</TabsList>
 
 						<TabsContent value="client">
-							<form
-								onSubmit={(e) => {
-									e.preventDefault();
-									authenticate("client", authCopy.registerClientSuccess);
-								}}
-							>
+							<form onSubmit={onRegisterClient}>
 								<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 									<div className="mb-5">
 										<Label>{authCopy.fullNameLabel}</Label>
-										<Input placeholder={authCopy.fullNamePlaceholder} />
+										<Input
+											placeholder={authCopy.fullNamePlaceholder}
+											{...clientRegisterForm.register("name")}
+										/>
+										<FieldMessage
+											error={clientRegisterForm.formState.errors.name}
+										/>
 									</div>
 									<div className="mb-5">
 										<Label>{authCopy.phoneLabel}</Label>
-										<Input placeholder={authCopy.phonePlaceholderClient} />
+										<Input
+											placeholder={authCopy.phonePlaceholderClient}
+											{...clientRegisterForm.register("phone")}
+										/>
+										<FieldMessage
+											error={clientRegisterForm.formState.errors.phone}
+										/>
 									</div>
 								</div>
 								<div className="mb-5">
 									<Label>{authCopy.emailLabel}</Label>
-									<Input placeholder={authCopy.emailPlaceholder} type="email" />
+									<Input
+										placeholder={authCopy.emailPlaceholder}
+										type="email"
+										{...clientRegisterForm.register("email")}
+									/>
+									<FieldMessage
+										error={clientRegisterForm.formState.errors.email}
+									/>
 								</div>
-								<Button full size="lg" type="submit">
+								<div className="mb-5">
+									<Label>{authCopy.passwordLabel}</Label>
+									<Input
+										placeholder={authCopy.passwordPlaceholder}
+										type="password"
+										{...clientRegisterForm.register("password")}
+									/>
+									<FieldMessage
+										error={clientRegisterForm.formState.errors.password}
+									/>
+								</div>
+								<Button
+									disabled={clientRegisterForm.formState.isSubmitting}
+									full
+									size="lg"
+									type="submit"
+								>
 									{authCopy.registerClientSubmit}
 								</Button>
 							</form>
 						</TabsContent>
 
 						<TabsContent value="restaurant">
-							<form
-								onSubmit={(e) => {
-									e.preventDefault();
-									authenticate(
-										"ownerWithoutRestaurant",
-										authCopy.registerRestaurantSuccess,
-									);
-								}}
-							>
+							<form onSubmit={onRegisterOwner}>
 								<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 									<div className="mb-5">
 										<Label>{authCopy.restaurantNameLabel}</Label>
-										<Input placeholder={authCopy.restaurantNamePlaceholder} />
+										<Input
+											placeholder={authCopy.restaurantNamePlaceholder}
+											{...ownerRegisterForm.register("restaurantName")}
+										/>
+										<FieldMessage
+											error={ownerRegisterForm.formState.errors.restaurantName}
+										/>
 									</div>
 									<div className="mb-5">
 										<Label>{authCopy.phoneLabel}</Label>
-										<Input placeholder={authCopy.phonePlaceholderRestaurant} />
+										<Input
+											placeholder={authCopy.phonePlaceholderRestaurant}
+											{...ownerRegisterForm.register("phone")}
+										/>
+										<FieldMessage
+											error={ownerRegisterForm.formState.errors.phone}
+										/>
 									</div>
 								</div>
 								<div className="mb-5">
@@ -302,17 +430,49 @@ export function LandingExperience() {
 									<Input
 										placeholder={authCopy.corporateEmailPlaceholder}
 										type="email"
+										{...ownerRegisterForm.register("corporateEmail")}
+									/>
+									<FieldMessage
+										error={ownerRegisterForm.formState.errors.corporateEmail}
 									/>
 								</div>
 								<div className="mb-5">
 									<Label>{authCopy.addressLabel}</Label>
-									<Input placeholder={authCopy.addressPlaceholder} />
+									<Input
+										placeholder={authCopy.addressPlaceholder}
+										{...ownerRegisterForm.register("address")}
+									/>
+									<FieldMessage
+										error={ownerRegisterForm.formState.errors.address}
+									/>
 								</div>
 								<div className="mb-5">
 									<Label>{authCopy.bioLabel}</Label>
-									<Textarea placeholder={authCopy.bioPlaceholder} />
+									<Textarea
+										placeholder={authCopy.bioPlaceholder}
+										{...ownerRegisterForm.register("bio")}
+									/>
+									<FieldMessage
+										error={ownerRegisterForm.formState.errors.bio}
+									/>
 								</div>
-								<Button full size="lg" type="submit">
+								<div className="mb-5">
+									<Label>{authCopy.passwordLabel}</Label>
+									<Input
+										placeholder={authCopy.passwordPlaceholder}
+										type="password"
+										{...ownerRegisterForm.register("password")}
+									/>
+									<FieldMessage
+										error={ownerRegisterForm.formState.errors.password}
+									/>
+								</div>
+								<Button
+									disabled={ownerRegisterForm.formState.isSubmitting}
+									full
+									size="lg"
+									type="submit"
+								>
 									{authCopy.registerRestaurantSubmit}
 								</Button>
 							</form>

@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "~/components/ui/DropdownMenu";
 import { ProfileDialog } from "~/features/profile/components/ProfileDialog";
 import { profileCopy } from "~/features/profile/copy";
 import { useSessionState } from "~/features/session/SessionContext";
@@ -21,7 +29,6 @@ export function ClientNavbar() {
 		openMobileSearch,
 		closeMobileSearch,
 	} = useBrowse();
-	const [menuOpen, setMenuOpen] = useState(false);
 	const [profileOpen, setProfileOpen] = useState(false);
 
 	const initial = user?.name?.charAt(0).toUpperCase() ?? "?";
@@ -31,17 +38,12 @@ export function ClientNavbar() {
 		router.push("/restaurants");
 	}
 
-	function handleLogout() {
-		logout();
-		setMenuOpen(false);
+	async function handleLogout() {
+		await logout();
 		setProfileOpen(false);
 		toast.success(browseCopy.logoutSuccess);
 		router.push("/");
-	}
-
-	function openProfile() {
-		setMenuOpen(false);
-		setProfileOpen(true);
+		router.refresh();
 	}
 
 	const iconBtn =
@@ -112,51 +114,35 @@ export function ClientNavbar() {
 						<Bell size={16} />
 						<span className="absolute top-[7px] right-[7px] h-[7px] w-[7px] rounded-full border-2 border-surface bg-accent" />
 					</button>
-					<div className="relative">
-						<button
+					<DropdownMenu>
+						<DropdownMenuTrigger
 							aria-label="Perfil"
-							className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--accent),#c9611c)] font-bold text-[0.9rem] text-white transition-transform duration-200 hover:scale-105"
-							onClick={() => setMenuOpen((o) => !o)}
-							type="button"
+							className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--accent),#c9611c)] font-bold text-[0.9rem] text-white outline-none transition-transform duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-accent"
 						>
 							{initial}
-						</button>
-						{menuOpen && (
-							<>
-								<button
-									aria-hidden
-									className="fixed inset-0 z-[210] cursor-default"
-									onClick={() => setMenuOpen(false)}
-									tabIndex={-1}
-									type="button"
-								/>
-								<div className="absolute right-0 z-[220] mt-2 w-56 rounded-[var(--radius-sm)] border border-[var(--border)] bg-surface p-3 shadow-[var(--shadow)]">
-									<div className="border-[var(--border)] border-b px-1 pb-2">
-										<div className="font-semibold text-sm text-text">
-											{user?.name}
-										</div>
-										<div className="truncate text-muted text-xs">
-											{user?.email}
-										</div>
-									</div>
-									<button
-										className="mt-2 w-full rounded-md px-3 py-2 text-left text-sm text-text transition-colors hover:bg-surface2"
-										onClick={openProfile}
-										type="button"
-									>
-										{profileCopy.trigger}
-									</button>
-									<button
-										className="w-full rounded-md px-3 py-2 text-left text-red text-sm transition-colors hover:bg-red-soft"
-										onClick={handleLogout}
-										type="button"
-									>
-										{browseCopy.logout}
-									</button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuLabel>
+								<div className="font-semibold text-sm text-text">
+									{user?.name}
 								</div>
-							</>
-						)}
-					</div>
+								<div className="truncate text-muted text-xs">{user?.email}</div>
+							</DropdownMenuLabel>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem onSelect={() => setProfileOpen(true)}>
+								{profileCopy.trigger}
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								onSelect={(e) => {
+									e.preventDefault();
+									void handleLogout();
+								}}
+								variant="danger"
+							>
+								{browseCopy.logout}
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 			</nav>
 

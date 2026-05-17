@@ -1,21 +1,9 @@
-import { toSessionUser } from "~/features/auth/mappers";
-import { mockUsers, mockUsersById } from "~/features/auth/mock/users";
-import type { Role, SeededUserKey, SessionUser } from "~/features/auth/types";
+import type { SessionUser } from "~/features/auth/types";
 import {
 	mockRestaurantRecords,
 	mockRestaurantViewsById,
 } from "~/features/restaurant/mock/restaurants";
 import type { RestaurantView } from "~/features/restaurant/types";
-
-/** Mock session persistence; injected so the core stays React/DOM-free. */
-export interface SessionCookiePort {
-	readSession(): string | null;
-	writeSession(userId: string): void;
-	clearSession(): void;
-	readOnboarded(): boolean;
-	writeOnboarded(): void;
-	clearOnboarded(): void;
-}
 
 export interface ProfileValues {
 	name: string;
@@ -29,14 +17,13 @@ export interface GuestProfile {
 }
 
 export interface SessionDeps {
-	cookies: SessionCookiePort;
 	/** Base profile for any user id (seeded users + synthetic owner-demo guests). */
 	baseGuest(userId: string): GuestProfile;
 }
 
 export interface SessionSnapshot {
 	user: SessionUser | null;
-	role: Role | null;
+	role: SessionUser["role"] | null;
 	/** Resolved owner restaurant, or `null` for clients / signed-out. */
 	activeRestaurant: RestaurantView | null;
 }
@@ -44,9 +31,15 @@ export interface SessionSnapshot {
 export interface SessionState {
 	getSnapshot(): SessionSnapshot;
 	subscribe(listener: () => void): () => void;
-	/** Restores the user from the session cookie (mock hydration). */
-	hydrate(): void;
-	login(key: SeededUserKey): SessionUser;
+	/**
+	 * Pushes the real Better Auth user into the store (or `null` on sign-out).
+	 * Replaces the former mock cookie `login`/`hydrate` — the auth authority
+	 * now lives in Better Auth; this store only derives owner active-restaurant
+	 * and holds the still-mock profile/onboarding shims (their owning phases
+	 * replace them).
+	 */
+	setSessionUser(next: SessionUser | null): void;
+	/** Local state reset; the real Better Auth sign-out is the caller's job. */
 	logout(): void;
 	updateProfile(values: ProfileValues): void;
 	completeOnboarding(): void;
@@ -64,10 +57,9 @@ const restaurantIdByOwnerId: Record<string, string> = Object.fromEntries(
 );
 
 /**
- * Owner active-restaurant resolution (moved here from the owner feature).
- * Seeded owners map directly via `ownerId`; an owner promoted through
- * onboarding has no persisted record yet (documented Phase 5 debt), so the
- * first seeded restaurant is used as a populated stand-in.
+ * Owner active-restaurant resolution (still mock-backed until P4a). Seeded
+ * owners map directly via `ownerId`; a real owner with no mock record falls
+ * back to the first seeded restaurant as a populated stand-in.
  */
 function resolveActiveRestaurant(
 	user: SessionUser | null,
@@ -82,16 +74,15 @@ function resolveActiveRestaurant(
 }
 
 /**
- * Single source of session state — user, role, owner active restaurant, and
- * in-session profile overrides. React-free so a future persistence/server
- * adapter can implement the same interface without re-touching callers.
+ * Single source of client session state — real user (fed from Better Auth),
+ * owner active restaurant, and the in-session profile/onboarding shims.
+ * React-free so the still-mock shims stay unit-testable as their owning
+ * phases swap them for real data.
  */
-export function createSessionState({
-	cookies,
-	baseGuest,
-}: SessionDeps): SessionState {
+export function createSessionState({ baseGuest }: SessionDeps): SessionState {
 	let user: SessionUser | null = null;
 	let activeRestaurant: RestaurantView | null = null;
+	let onboarded = false;
 	const profileOverrides = new Map<string, GuestProfile>();
 	const listeners = new Set<() => void>();
 	let snapshot: SessionSnapshot = {
@@ -101,11 +92,7 @@ export function createSessionState({
 	};
 
 	function commit() {
-		snapshot = {
-			user,
-			role: user?.role ?? null,
-			activeRestaurant,
-		};
+		snapshot = { user, role: user?.role ?? null, activeRestaurant };
 		for (const listener of listeners) listener();
 	}
 
@@ -123,23 +110,21 @@ export function createSessionState({
 			listeners.add(listener);
 			return () => listeners.delete(listener);
 		},
-		hydrate() {
-			const id = cookies.readSession();
-			if (!id) return;
-			const row = mockUsersById[id];
-			if (row) setUser(toSessionUser(row, cookies.readOnboarded()));
-		},
-		login(key) {
-			cookies.clearOnboarded();
-			const session = toSessionUser(mockUsers[key]);
-			cookies.writeSession(session.id);
-			profileOverrides.clear();
-			setUser(session);
-			return session;
+		setSessionUser(next) {
+			if (!next) {
+				onboarded = false;
+				profileOverrides.clear();
+				setUser(null);
+				return;
+			}
+			if (next.id !== user?.id) {
+				onboarded = false;
+				profileOverrides.clear();
+			}
+			setUser({ ...next, hasRestaurant: next.hasRestaurant || onboarded });
 		},
 		logout() {
-			cookies.clearSession();
-			cookies.clearOnboarded();
+			onboarded = false;
 			profileOverrides.clear();
 			setUser(null);
 		},
@@ -158,7 +143,7 @@ export function createSessionState({
 			});
 		},
 		completeOnboarding() {
-			cookies.writeOnboarded();
+			onboarded = true;
 			if (user) setUser({ ...user, hasRestaurant: true });
 		},
 		guestProfile(userId) {

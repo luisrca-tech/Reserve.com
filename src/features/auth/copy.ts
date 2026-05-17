@@ -58,4 +58,6 @@ export const authCopy = {
 		"Restaurante cadastrado! Vamos configurar seu espaço.",
 	logoutSuccess: "Sessão encerrada.",
 	genericError: "Algo deu errado. Tente novamente.",
+	invalidCredentials: "Email ou senha incorretos.",
+	emailTaken: "Este email já está cadastrado.",
 } as const;

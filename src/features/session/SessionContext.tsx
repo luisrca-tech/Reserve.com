@@ -9,9 +9,9 @@ import {
 	useSyncExternalStore,
 } from "react";
 
-import type { SeededUserKey, SessionUser } from "~/features/auth/types";
+import type { Role } from "~/features/auth/types";
 import { reservationGuest } from "~/features/owner/mock/ownerReservations";
-import { browserCookiePort } from "./browserCookies";
+import { authClient } from "~/server/better-auth/client";
 import {
 	createSessionState,
 	type ProfileValues,
@@ -20,8 +20,7 @@ import {
 } from "./sessionState";
 
 interface SessionContextValue extends SessionSnapshot {
-	login: (key: SeededUserKey) => SessionUser;
-	logout: () => void;
+	logout: () => Promise<void>;
 	updateProfile: (values: ProfileValues) => void;
 	completeOnboarding: () => void;
 }
@@ -29,24 +28,37 @@ interface SessionContextValue extends SessionSnapshot {
 const SessionContext = createContext<SessionState | null>(null);
 
 /**
- * One provider for user, role, and owner active restaurant. Replaces the
- * former auth-context / owner-mapper / static-profile stitching: every view
- * reads session from `useSessionState`, and a profile edit propagates to the
- * owner's reservation view because both read the same `guestProfile` source.
+ * One provider for user, role, and owner active restaurant — now fed by the
+ * real Better Auth session (`authClient.useSession`) instead of the mock
+ * cookie. `hasRestaurant` defaults to `false` on the client; the server route
+ * guards are the authority and refine owner-with/without-restaurant routing.
  */
 export function SessionProvider({ children }: { children: React.ReactNode }) {
 	const stateRef = useRef<SessionState>(undefined);
 	if (!stateRef.current) {
-		stateRef.current = createSessionState({
-			cookies: browserCookiePort,
-			baseGuest: reservationGuest,
-		});
+		stateRef.current = createSessionState({ baseGuest: reservationGuest });
 	}
 	const state = stateRef.current;
 
+	const { data } = authClient.useSession();
+	const u = data?.user;
+	const id = u?.id ?? null;
+
 	useEffect(() => {
-		state.hydrate();
-	}, [state]);
+		if (!u || !id) {
+			state.setSessionUser(null);
+			return;
+		}
+		state.setSessionUser({
+			id: u.id,
+			name: u.name,
+			email: u.email,
+			phone: u.phone ?? null,
+			role: (u.role ?? "client") as Role,
+			hasRestaurant: false,
+		});
+		// `u` is re-created each render; the primitive deps capture every change.
+	}, [state, id, u?.name, u?.email, u?.phone, u?.role, u]);
 
 	return (
 		<SessionContext.Provider value={state}>{children}</SessionContext.Provider>
@@ -72,8 +84,10 @@ export function useSessionState(): SessionContextValue {
 	return useMemo(
 		() => ({
 			...snapshot,
-			login: state.login,
-			logout: state.logout,
+			logout: async () => {
+				await authClient.signOut();
+				state.logout();
+			},
 			updateProfile: state.updateProfile,
 			completeOnboarding: state.completeOnboarding,
 		}),
@@ -89,11 +103,9 @@ export function useGuestProfile(): (userId: string) => {
 	return useSessionStore().guestProfile;
 }
 
-/** Post-auth destination based on role + onboarding state. */
-export function redirectPathFor(user: SessionUser): string {
-	if (user.role === "client") return "/restaurants";
-	if (user.role === "restaurant_owner") {
-		return user.hasRestaurant ? "/owner/overview" : "/owner/onboarding";
-	}
+/** Post-auth destination by role. Server guards refine owner routing. */
+export function redirectPathFor(role: Role): string {
+	if (role === "client") return "/restaurants";
+	if (role === "restaurant_owner") return "/owner/overview";
 	return "/";
 }
