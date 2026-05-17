@@ -89,6 +89,7 @@ export function useOnboardingForm() {
 	const categories = api.category.list.useQuery();
 	const createRestaurant = api.restaurant.create.useMutation();
 	const { startUpload } = useUploadThing("restaurantImage");
+	const { startUpload: startMenuUpload } = useUploadThing("restaurantMenu");
 
 	const [categoryQuery, setCategoryQuery] = useState("");
 	const options = useMemo(() => categories.data ?? [], [categories.data]);
@@ -138,9 +139,14 @@ export function useOnboardingForm() {
 	}
 
 	const [images, setImages] = useState<UploadedImage[]>([]);
-	const [menuName, setMenuName] = useState<string | null>(null);
+	const [menuFile, setMenuFile] = useState<File | null>(null);
+	const menuName = menuFile?.name ?? null;
 	const imageInputRef = useRef<HTMLInputElement>(null);
 	const menuInputRef = useRef<HTMLInputElement>(null);
+
+	function pickMenu(file: File | null) {
+		setMenuFile(file);
+	}
 
 	function onPickImages(files: FileList | null) {
 		if (!files) return;
@@ -210,6 +216,9 @@ export function useOnboardingForm() {
 				images.map((i) => i.file),
 				{ restaurantId: id },
 			);
+			if (menuFile) {
+				await startMenuUpload([menuFile], { restaurantId: id });
+			}
 			toast.success(t.success);
 			router.push("/owner/overview");
 			router.refresh();
@@ -246,7 +255,7 @@ export function useOnboardingForm() {
 		removeImage,
 		imageInputRef,
 		menuName,
-		setMenuName,
+		pickMenu,
 		menuInputRef,
 
 		submit,

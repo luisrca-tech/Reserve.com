@@ -15,6 +15,11 @@ import {
 	completeRestaurantImageUpload,
 	resolveRestaurantUploadMetadata,
 } from "./restaurantImage";
+import {
+	ALLOWED_RESTAURANT_MENU_MIMES,
+	completeRestaurantMenuUpload,
+	resolveRestaurantMenuUploadMetadata,
+} from "./restaurantMenu";
 import { utapi } from "./utapi";
 
 const f = createUploadthing();
@@ -84,6 +89,45 @@ export const uploadRouter = {
 				);
 			} catch (error) {
 				console.error("restaurantImage onUploadComplete failed", error);
+			}
+
+			return { url: file.ufsUrl };
+		}),
+
+	restaurantMenu: f({
+		"application/pdf": { maxFileSize: "16MB", maxFileCount: 1 },
+		"image/jpeg": { maxFileSize: "8MB", maxFileCount: 1 },
+		"image/png": { maxFileSize: "8MB", maxFileCount: 1 },
+		"image/webp": { maxFileSize: "8MB", maxFileCount: 1 },
+	})
+		.input(z.object({ restaurantId: z.string().uuid() }))
+		.middleware(async ({ req, input }) =>
+			resolveRestaurantMenuUploadMetadata({
+				headers: req.headers,
+				auth,
+				restaurantId: input.restaurantId,
+				db,
+			}),
+		)
+		.onUploadComplete(async ({ metadata, file }) => {
+			if (!ALLOWED_RESTAURANT_MENU_MIMES.has(file.type)) {
+				throw new UploadThingError("Invalid file type");
+			}
+
+			try {
+				await completeRestaurantMenuUpload(
+					{
+						userId: metadata.userId,
+						restaurantId: metadata.restaurantId,
+						url: file.ufsUrl,
+						key: file.key,
+						mimeType: file.type,
+						sizeBytes: file.size,
+					},
+					{ db, utapi },
+				);
+			} catch (error) {
+				console.error("restaurantMenu onUploadComplete failed", error);
 			}
 
 			return { url: file.ufsUrl };

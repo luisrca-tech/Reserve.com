@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { type FieldError, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -16,6 +17,8 @@ import {
 	SelectValue,
 } from "~/components/ui/Select";
 import { Textarea } from "~/components/ui/Textarea";
+import { UploadDropzone } from "~/lib/uploadthing";
+import { api } from "~/trpc/react";
 import { ownerCopy } from "../copy";
 import { useOwnerStore } from "../OwnerStoreContext";
 import { type UpdateSettingsInput, updateSettingsInput } from "../validation";
@@ -62,6 +65,8 @@ function FieldMessage({ error }: { error?: FieldError }) {
 
 export function OwnerSettings() {
 	const { restaurant, saveSettings } = useOwnerStore();
+	const router = useRouter();
+	const utils = api.useUtils();
 	const {
 		register,
 		handleSubmit,
@@ -183,6 +188,55 @@ export function OwnerSettings() {
 					{ownerCopy.settings.save}
 				</Button>
 			</form>
+
+			<section className="mt-6 space-y-3 rounded-[var(--radius)] border border-[var(--border)] bg-surface p-6">
+				<div>
+					<Label>{ownerCopy.settings.menuLabel}</Label>
+					<p className="mt-1 text-[0.85rem] text-muted">
+						{ownerCopy.settings.menuHint}
+					</p>
+				</div>
+
+				{restaurant.menuUrl ? (
+					restaurant.menuKind === "pdf" ? (
+						<a
+							className="inline-flex items-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-surface2 px-4 py-2 text-[0.85rem] text-text transition-colors hover:border-accent"
+							href={restaurant.menuUrl}
+							rel="noreferrer"
+							target="_blank"
+						>
+							{ownerCopy.settings.menuCurrentPdf}
+						</a>
+					) : (
+						// biome-ignore lint/performance/noImgElement: remote menu asset
+						<img
+							alt={ownerCopy.settings.menuLabel}
+							className="max-h-48 rounded-[var(--radius-sm)] border border-[var(--border)]"
+							src={restaurant.menuUrl}
+						/>
+					)
+				) : (
+					<p className="text-[0.85rem] text-muted">
+						{ownerCopy.settings.menuNone}
+					</p>
+				)}
+
+				<UploadDropzone
+					endpoint="restaurantMenu"
+					input={{ restaurantId: restaurant.id }}
+					onClientUploadComplete={async () => {
+						await utils.owner.restaurant.invalidate();
+						await utils.restaurant.byId.invalidate({
+							restaurantId: restaurant.id,
+						});
+						router.refresh();
+						toast.success(ownerCopy.settings.menuUpdated);
+					}}
+					onUploadError={() => {
+						toast.error(ownerCopy.settings.menuError);
+					}}
+				/>
+			</section>
 		</div>
 	);
 }

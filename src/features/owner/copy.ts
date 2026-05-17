@@ -110,6 +110,12 @@ export const ownerCopy = {
 		save: "Salvar alterações",
 		saved: "Configurações atualizadas.",
 		saveError: "Não foi possível salvar as configurações. Tente novamente.",
+		menuLabel: "Cardápio",
+		menuHint: "Substitua o cardápio enviando um novo PDF ou imagem.",
+		menuCurrentPdf: "Ver cardápio atual (PDF)",
+		menuNone: "Nenhum cardápio enviado ainda.",
+		menuUpdated: "Cardápio atualizado.",
+		menuError: "Não foi possível enviar o cardápio. Tente novamente.",
 	},
 
 	months: [

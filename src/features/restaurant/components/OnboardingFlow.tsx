@@ -320,7 +320,7 @@ export function OnboardingFlow() {
 							className="hidden"
 							onChange={(e) => {
 								const file = e.target.files?.[0];
-								if (file) f.setMenuName(file.name);
+								if (file) f.pickMenu(file);
 								e.target.value = "";
 							}}
 							ref={f.menuInputRef}
@@ -340,7 +340,7 @@ export function OnboardingFlow() {
 								<span className="flex-1">{t.menuReady(f.menuName)}</span>
 								<button
 									className="text-muted hover:text-text"
-									onClick={() => f.setMenuName(null)}
+									onClick={() => f.pickMenu(null)}
 									type="button"
 								>
 									{t.menuRemove}
