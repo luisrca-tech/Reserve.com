@@ -1,7 +1,10 @@
 import { createTRPCRouter } from "~/server/api/trpc";
+import { createReservation } from "./mutations";
 
 /**
- * Skeleton. Procedures land under `queries/` and `mutations/` and are
- * composed flat here (path stays `reservation.<procedure>`). Wired from P3a.
+ * `queries/` and `mutations/` are organisational only — procedures are
+ * composed flat here so tRPC call paths stay `reservation.<procedure>`.
  */
-export const reservationRouter = createTRPCRouter({});
+export const reservationRouter = createTRPCRouter({
+	create: createReservation,
+});

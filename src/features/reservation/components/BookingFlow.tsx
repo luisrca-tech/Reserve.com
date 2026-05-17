@@ -16,7 +16,6 @@ import { useSessionState } from "~/features/session/SessionContext";
 import { createAvailability } from "~/server/domain/reservation";
 import { api } from "~/trpc/react";
 import { bookingCopy } from "../copy";
-import { useReservationStore } from "./ReservationStoreContext";
 
 /** Local-midnight → UTC-midnight, so weekday/slot math stays UTC-consistent. */
 function toUtcDay(date: Date): Date {
@@ -32,11 +31,35 @@ function startOfToday(): Date {
 
 export function BookingFlow({ restaurant }: { restaurant: RestaurantView }) {
 	const { user } = useSessionState();
-	const { addReservation } = useReservationStore();
+	const utils = api.useUtils();
 	const [{ context, reservations }] =
 		api.restaurant.availability.useSuspenseQuery({
 			restaurantId: restaurant.id,
 		});
+
+	function resetForm() {
+		setSelectedDate(null);
+		setSelectedHour(null);
+		setPartySize(2);
+		setTableCount(1);
+	}
+
+	// Invalidate-only: the server authors the id and the auto-confirm
+	// outcome — nothing is safe to fake. On success the contract queries
+	// reconcile to server truth (client/owner reservation lists land in
+	// P3b/P4a; `restaurant.availability` is the contract query that exists).
+	const create = api.reservation.create.useMutation({
+		onSuccess: async () => {
+			await utils.restaurant.availability.invalidate({
+				restaurantId: restaurant.id,
+			});
+			toast.success(bookingCopy.confirmed);
+			resetForm();
+		},
+		onError: (error) => {
+			toast.error(error.message);
+		},
+	});
 
 	const today = useMemo(startOfToday, []);
 	const [calendarOpen, setCalendarOpen] = useState(false);
@@ -84,6 +107,7 @@ export function BookingFlow({ restaurant }: { restaurant: RestaurantView }) {
 
 	const canConfirm =
 		Boolean(user) &&
+		!create.isPending &&
 		selectedStart !== null &&
 		partySize >= 1 &&
 		(selectedSlot?.canBook(tableCount) ?? false);
@@ -94,19 +118,12 @@ export function BookingFlow({ restaurant }: { restaurant: RestaurantView }) {
 			return;
 		}
 		if (!selectedStart) return;
-		addReservation({
-			userId: user.id,
+		create.mutate({
 			restaurantId: restaurant.id,
 			startTime: selectedStart,
 			partySize,
 			tableCount,
-			autoConfirm: restaurant.autoConfirmEnabled,
 		});
-		toast.success(bookingCopy.confirmed);
-		setSelectedDate(null);
-		setSelectedHour(null);
-		setPartySize(2);
-		setTableCount(1);
 	}
 
 	const dateLabel = selectedDate
