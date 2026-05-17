@@ -12,12 +12,8 @@ import {
 import { toast } from "sonner";
 
 import { useAuth } from "~/features/auth/MockAuthContext";
-import { createAvailability } from "~/features/reservation/Availability";
-import {
-	DEFAULT_LIFECYCLE_CONFIG,
-	nextStates,
-} from "~/features/reservation/lifecycle";
 import { mockReservations } from "~/features/reservation/mock/reservations";
+import { reservationState } from "~/features/reservation/reservationState";
 import type { MockReservation } from "~/features/reservation/types";
 import type { RestaurantView } from "~/features/restaurant/types";
 import { ownerCopy } from "./copy";
@@ -98,27 +94,36 @@ export function OwnerStoreProvider({
 		[],
 	);
 
+	// Translate domain transitions/alerts emitted by the pure reducer into
+	// owner-facing notifications. No rule logic lives here.
 	const runTick = useCallback(() => {
 		const now = new Date();
 		setReservations((prev) => {
-			const result = nextStates({
-				now,
+			const { nextReservations, transitions, alerts } = reservationState({
 				reservations: prev,
-				autoConfirm: () => restaurant.autoConfirmEnabled,
-				config: DEFAULT_LIFECYCLE_CONFIG,
+				restaurant: {
+					restaurantId: restaurant.id,
+					tableCount: restaurant.tableCount,
+					autoConfirmEnabled: restaurant.autoConfirmEnabled,
+					lowTableThreshold: restaurant.lowTableThreshold,
+					hoursByWeekday: restaurant.hoursByWeekday,
+				},
+				now,
 			});
 
-			for (const transition of result.transitions) {
+			for (const transition of transitions) {
 				const target = prev.find((r) => r.id === transition.id);
 				if (!target) continue;
 				const guest = reservationGuest(target.userId);
-				const when = timeLabel(target.startTime);
 				if (transition.to === "expired") {
 					pushNotification(
 						{
 							key: `expired:${target.id}`,
 							kind: "expired",
-							message: ownerCopy.notifications.expired(guest.name, when),
+							message: ownerCopy.notifications.expired(
+								guest.name,
+								timeLabel(target.startTime),
+							),
 							at: now,
 						},
 						toast.warning,
@@ -136,52 +141,33 @@ export function OwnerStoreProvider({
 				}
 			}
 
-			for (const id of result.reminders) {
-				const target = result.reservations.find((r) => r.id === id);
-				if (!target) continue;
-				const guest = reservationGuest(target.userId);
-				pushNotification(
-					{
-						key: `reminder:${id}`,
-						kind: "reminder",
-						message: ownerCopy.notifications.reminder(
-							guest.name,
-							timeLabel(target.startTime),
-						),
-						at: now,
-					},
-					toast.info,
-				);
-			}
-
-			// Low-tables alert per upcoming slot under the threshold.
-			const availability = createAvailability(result.reservations, {
-				restaurantId: restaurant.id,
-				tableCount: restaurant.tableCount,
-				autoConfirmEnabled: restaurant.autoConfirmEnabled,
-				lowTableThreshold: restaurant.lowTableThreshold,
-				hoursByWeekday: restaurant.hoursByWeekday,
-			});
-			const slots = new Set(
-				result.reservations
-					.filter(
-						(r) =>
-							r.startTime.getTime() >= now.getTime() &&
-							(r.status === "pending" || r.status === "confirmed"),
-					)
-					.map((r) => r.startTime.getTime()),
-			);
-			for (const slotMs of slots) {
-				const slotTime = new Date(slotMs);
-				const { remaining, isLow } = availability.slotState(slotTime);
-				if (isLow) {
+			for (const alert of alerts) {
+				if (alert.kind === "reminder") {
+					const target = nextReservations.find(
+						(r) => r.id === alert.reservationId,
+					);
+					if (!target) continue;
+					const guest = reservationGuest(target.userId);
 					pushNotification(
 						{
-							key: `low:${slotMs}`,
+							key: `reminder:${alert.reservationId}`,
+							kind: "reminder",
+							message: ownerCopy.notifications.reminder(
+								guest.name,
+								timeLabel(target.startTime),
+							),
+							at: now,
+						},
+						toast.info,
+					);
+				} else {
+					pushNotification(
+						{
+							key: `low:${alert.slotMs}`,
 							kind: "lowTables",
 							message: ownerCopy.notifications.lowTables(
-								timeLabel(slotTime),
-								remaining,
+								timeLabel(alert.startTime),
+								alert.remaining,
 							),
 							at: now,
 						},
@@ -190,7 +176,7 @@ export function OwnerStoreProvider({
 				}
 			}
 
-			return result.reservations;
+			return nextReservations;
 		});
 	}, [restaurant, pushNotification]);
 
