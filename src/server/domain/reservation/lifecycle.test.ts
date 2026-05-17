@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Reservation } from "~/server/db/schema/types";
-import { DEFAULT_LIFECYCLE_CONFIG, nextStates, validate } from "./lifecycle";
+import {
+	complete,
+	DEFAULT_LIFECYCLE_CONFIG,
+	nextStates,
+	validate,
+} from "./lifecycle";
 
 const T0 = new Date("2026-06-02T18:00:00.000Z").getTime();
 
@@ -195,5 +200,33 @@ describe("validate — the single owner validate transition", () => {
 	it("does not resurrect an expired reservation", () => {
 		const expired = resv({ id: "e1", status: "expired" });
 		expect(validate(expired, now)).toBe(expired);
+	});
+});
+
+describe("complete — the single owner mark-honoured transition", () => {
+	it("moves a confirmed reservation to completed", () => {
+		const next = complete(
+			resv({ id: "c1", status: "confirmed", validatedAt: new Date(T0) }),
+		);
+		expect(next.status).toBe("completed");
+	});
+
+	it("leaves a pending reservation untouched (must be confirmed first)", () => {
+		const pending = resv({ id: "p1", status: "pending" });
+		expect(complete(pending)).toBe(pending);
+	});
+
+	it("leaves a cancelled reservation untouched", () => {
+		const cancelled = resv({
+			id: "x1",
+			status: "cancelled",
+			cancelledAt: new Date(T0),
+		});
+		expect(complete(cancelled)).toBe(cancelled);
+	});
+
+	it("is idempotent for an already-completed reservation", () => {
+		const completed = resv({ id: "d1", status: "completed" });
+		expect(complete(completed)).toBe(completed);
 	});
 });

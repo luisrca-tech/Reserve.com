@@ -86,3 +86,14 @@ export function validate(r: Reservation, now: Date): Reservation {
 	if (r.status !== "pending") return r;
 	return { ...r, status: "confirmed", validatedAt: now };
 }
+
+/**
+ * The single definition of an owner marking a reservation honoured:
+ * `confirmed → completed`. Any non-confirmed reservation is returned
+ * unchanged (same reference) so callers route this through here instead
+ * of hand-mutating status. React-free and pure.
+ */
+export function complete(r: Reservation): Reservation {
+	if (r.status !== "confirmed") return r;
+	return { ...r, status: "completed" };
+}

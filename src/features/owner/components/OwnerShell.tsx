@@ -12,7 +12,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { ProfileDialog } from "~/features/profile/components/ProfileDialog";
-import { ReservationStoreProvider } from "~/features/reservation/components/ReservationStoreContext";
 import { useSessionState } from "~/features/session/SessionContext";
 import { ownerCopy } from "../copy";
 import { OwnerStoreProvider } from "../OwnerStoreContext";
@@ -35,11 +34,9 @@ const NAV = [
 
 export function OwnerShell({ children }: { children: React.ReactNode }) {
 	return (
-		<ReservationStoreProvider>
-			<OwnerStoreProvider>
-				<OwnerLayout>{children}</OwnerLayout>
-			</OwnerStoreProvider>
-		</ReservationStoreProvider>
+		<OwnerStoreProvider>
+			<OwnerLayout>{children}</OwnerLayout>
+		</OwnerStoreProvider>
 	);
 }
 

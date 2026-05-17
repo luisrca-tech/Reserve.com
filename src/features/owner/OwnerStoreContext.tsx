@@ -4,7 +4,6 @@ import {
 	createContext,
 	useCallback,
 	useContext,
-	useEffect,
 	useMemo,
 	useState,
 } from "react";
@@ -35,7 +34,6 @@ interface OwnerStoreValue {
 	 * client-side from `owner.reservations` and surfaces them in the bell.
 	 */
 	notifications: OwnerNotification[];
-	validateReservation: (id: string) => void;
 	setAutoConfirm: (enabled: boolean) => void;
 	saveTableCount: (tableCount: number) => void;
 	saveSettings: (values: OwnerSettingsUpdate) => void;
@@ -70,28 +68,17 @@ export function OwnerStoreProvider({
 		throw new Error("Owner panel rendered without a restaurant");
 	}
 
-	// P4a is read-only. The owner action buttons (validate, auto-confirm,
-	// table count, settings) stay interactive as in-session local overlays;
-	// P4b/P4c replace these with real optimistic mutations.
+	// P4b wired the reservation actions (confirm/cancel/complete) as real
+	// optimistic mutations that patch the `owner.reservations` query cache
+	// directly, so reservations are read straight from server truth here —
+	// no local overlay. The settings edits (auto-confirm, table count,
+	// settings form) stay in-session overlays until P4c persists them.
 	const [edits, setEdits] = useState<RestaurantEdits>({});
-	const [reservations, setReservations] = useState(serverReservations);
-
-	useEffect(() => {
-		setReservations(serverReservations);
-	}, [serverReservations]);
 
 	const restaurant = useMemo<RestaurantView>(
 		() => ({ ...serverRestaurant, ...edits }),
 		[serverRestaurant, edits],
 	);
-
-	const validateReservation = useCallback((id: string) => {
-		setReservations((prev) =>
-			prev.map((r) =>
-				r.id === id ? { ...r, status: "confirmed" as const } : r,
-			),
-		);
-	}, []);
 
 	const setAutoConfirm = useCallback((enabled: boolean) => {
 		setEdits((prev) => ({ ...prev, autoConfirmEnabled: enabled }));
@@ -116,9 +103,8 @@ export function OwnerStoreProvider({
 	const value = useMemo<OwnerStoreValue>(
 		() => ({
 			restaurant,
-			reservations,
+			reservations: serverReservations,
 			notifications: [],
-			validateReservation,
 			setAutoConfirm,
 			saveTableCount,
 			saveSettings,
@@ -126,8 +112,7 @@ export function OwnerStoreProvider({
 		}),
 		[
 			restaurant,
-			reservations,
-			validateReservation,
+			serverReservations,
 			setAutoConfirm,
 			saveTableCount,
 			saveSettings,

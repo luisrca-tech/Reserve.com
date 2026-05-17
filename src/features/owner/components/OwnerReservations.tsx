@@ -5,8 +5,13 @@ import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
 import { statusMeta } from "~/features/reservation/copy";
+import type { ReservationView } from "~/features/reservation/types";
+import { api } from "~/trpc/react";
 import { ownerCopy } from "../copy";
 import { useOwnerStore } from "../OwnerStoreContext";
+import type { OwnerReservationView } from "../types";
+
+type Status = ReservationView["status"];
 
 const toneClass: Record<string, string> = {
 	accent: "bg-accent-soft text-accent",
@@ -23,8 +28,8 @@ function whenLabel(date: Date): string {
 }
 
 export function OwnerReservations() {
-	const { restaurant, reservations, validateReservation, setAutoConfirm } =
-		useOwnerStore();
+	const { restaurant, reservations, setAutoConfirm } = useOwnerStore();
+	const utils = api.useUtils();
 
 	const ordered = useMemo(
 		() =>
@@ -34,10 +39,77 @@ export function OwnerReservations() {
 		[reservations],
 	);
 
-	function handleValidate(id: string) {
-		validateReservation(id);
-		toast.success(ownerCopy.reservations.validated);
+	// Optimistic per the contract: cancel in-flight → snapshot → patch the
+	// owner.reservations cache to the same status the server will return →
+	// roll back visibly on error → invalidate the three contract queries on
+	// settle. The server is the authority; the patch only previews its result.
+	function optimistic(next: Status, errorMessage: string) {
+		return {
+			async onMutate({ reservationId }: { reservationId: string }) {
+				await utils.owner.reservations.cancel();
+				const previous = utils.owner.reservations.getData();
+				utils.owner.reservations.setData(undefined, (old) =>
+					old?.map((r) =>
+						r.id === reservationId ? { ...r, status: next } : r,
+					),
+				);
+				return { previous };
+			},
+			onError(
+				_error: unknown,
+				_vars: { reservationId: string },
+				context?: { previous?: OwnerReservationView[] },
+			) {
+				utils.owner.reservations.setData(undefined, context?.previous);
+				toast.error(errorMessage);
+			},
+		};
 	}
+
+	const confirm = api.owner.confirmReservation.useMutation({
+		...optimistic("confirmed", ownerCopy.reservations.confirmError),
+		onSuccess() {
+			toast.success(ownerCopy.reservations.confirmed);
+		},
+	});
+	const cancel = api.owner.cancelReservation.useMutation({
+		...optimistic("cancelled", ownerCopy.reservations.cancelError),
+		onSuccess() {
+			toast.success(ownerCopy.reservations.cancelled);
+		},
+	});
+	const markComplete = api.owner.completeReservation.useMutation({
+		...optimistic("completed", ownerCopy.reservations.completeError),
+		onSuccess() {
+			toast.success(ownerCopy.reservations.completed);
+		},
+	});
+
+	function settle(restaurantId: string) {
+		return {
+			async onSettled() {
+				await Promise.all([
+					utils.owner.reservations.invalidate(),
+					utils.restaurant.availability.invalidate({ restaurantId }),
+					utils.reservation.list.invalidate(),
+				]);
+			},
+		};
+	}
+
+	function handleConfirm(r: OwnerReservationView) {
+		confirm.mutate({ reservationId: r.id }, settle(r.restaurantId));
+	}
+
+	function handleCancel(r: OwnerReservationView) {
+		cancel.mutate({ reservationId: r.id }, settle(r.restaurantId));
+	}
+
+	function handleComplete(r: OwnerReservationView) {
+		markComplete.mutate({ reservationId: r.id }, settle(r.restaurantId));
+	}
+
+	const busy = confirm.isPending || cancel.isPending || markComplete.isPending;
 
 	function handleToggle(next: boolean) {
 		setAutoConfirm(next);
@@ -144,16 +216,42 @@ export function OwnerReservations() {
 											</span>
 										</td>
 										<td className="px-4 py-3 text-right">
-											{r.status === "pending" && (
-												<Button
-													onClick={() => handleValidate(r.id)}
-													size="sm"
-													type="button"
-													variant="success"
-												>
-													{ownerCopy.reservations.validate}
-												</Button>
-											)}
+											<div className="flex justify-end gap-2">
+												{r.status === "pending" && (
+													<Button
+														disabled={busy}
+														onClick={() => handleConfirm(r)}
+														size="sm"
+														type="button"
+														variant="success"
+													>
+														{ownerCopy.reservations.confirm}
+													</Button>
+												)}
+												{r.status === "confirmed" && (
+													<Button
+														disabled={busy}
+														onClick={() => handleComplete(r)}
+														size="sm"
+														type="button"
+														variant="success"
+													>
+														{ownerCopy.reservations.complete}
+													</Button>
+												)}
+												{(r.status === "pending" ||
+													r.status === "confirmed") && (
+													<Button
+														disabled={busy}
+														onClick={() => handleCancel(r)}
+														size="sm"
+														type="button"
+														variant="danger"
+													>
+														{ownerCopy.reservations.cancel}
+													</Button>
+												)}
+											</div>
 										</td>
 									</tr>
 								);
