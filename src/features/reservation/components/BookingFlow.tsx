@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { Button } from "~/components/ui/Button";
 import { useAuth } from "~/features/auth/MockAuthContext";
 import type { RestaurantView } from "~/features/restaurant/types";
-import { isSlotFull, remainingTables } from "../capacity";
+import { createAvailability } from "../Availability";
 import { bookingCopy } from "../copy";
 import { useReservationStore } from "./ReservationStoreContext";
 
@@ -87,24 +87,31 @@ export function BookingFlow({ restaurant }: { restaurant: RestaurantView }) {
 		);
 	}
 
+	const availability = useMemo(
+		() =>
+			createAvailability(reservations, {
+				restaurantId: restaurant.id,
+				tableCount: restaurant.tableCount,
+				autoConfirmEnabled: restaurant.autoConfirmEnabled,
+				lowTableThreshold: restaurant.lowTableThreshold,
+				hoursByWeekday: restaurant.hoursByWeekday,
+			}),
+		[reservations, restaurant],
+	);
+
 	const selectedStart =
 		selectedDate && selectedHour !== null ? slotStart(selectedHour) : null;
 
-	const slotRemaining = selectedStart
-		? remainingTables(
-				reservations,
-				restaurant.id,
-				selectedStart,
-				restaurant.tableCount,
-			)
-		: 0;
+	const selectedSlot = selectedStart
+		? availability.slotState(selectedStart)
+		: null;
+	const slotRemaining = selectedSlot?.remaining ?? 0;
 
 	const canConfirm =
 		Boolean(user) &&
 		selectedStart !== null &&
 		partySize >= 1 &&
-		tableCount >= 1 &&
-		tableCount <= slotRemaining;
+		(selectedSlot?.canBook(tableCount) ?? false);
 
 	function confirm() {
 		if (!user) {
@@ -225,12 +232,7 @@ export function BookingFlow({ restaurant }: { restaurant: RestaurantView }) {
 					) : (
 						<div className="flex flex-wrap gap-2">
 							{openHours.map((hour) => {
-								const full = isSlotFull(
-									reservations,
-									restaurant.id,
-									slotStart(hour),
-									restaurant.tableCount,
-								);
+								const full = availability.slotState(slotStart(hour)).isFull;
 								const selected = selectedHour === hour;
 								return (
 									<button

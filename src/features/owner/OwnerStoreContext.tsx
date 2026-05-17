@@ -12,7 +12,7 @@ import {
 import { toast } from "sonner";
 
 import { useAuth } from "~/features/auth/MockAuthContext";
-import { remainingTables } from "~/features/reservation/capacity";
+import { createAvailability } from "~/features/reservation/Availability";
 import {
 	DEFAULT_LIFECYCLE_CONFIG,
 	nextStates,
@@ -155,6 +155,13 @@ export function OwnerStoreProvider({
 			}
 
 			// Low-tables alert per upcoming slot under the threshold.
+			const availability = createAvailability(result.reservations, {
+				restaurantId: restaurant.id,
+				tableCount: restaurant.tableCount,
+				autoConfirmEnabled: restaurant.autoConfirmEnabled,
+				lowTableThreshold: restaurant.lowTableThreshold,
+				hoursByWeekday: restaurant.hoursByWeekday,
+			});
 			const slots = new Set(
 				result.reservations
 					.filter(
@@ -166,13 +173,8 @@ export function OwnerStoreProvider({
 			);
 			for (const slotMs of slots) {
 				const slotTime = new Date(slotMs);
-				const remaining = remainingTables(
-					result.reservations,
-					restaurant.id,
-					slotTime,
-					restaurant.tableCount,
-				);
-				if (remaining <= restaurant.lowTableThreshold) {
+				const { remaining, isLow } = availability.slotState(slotTime);
+				if (isLow) {
 					pushNotification(
 						{
 							key: `low:${slotMs}`,

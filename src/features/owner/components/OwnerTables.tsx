@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
 import { Label } from "~/components/ui/Label";
-import { remainingTables, slotUsage } from "~/features/reservation/capacity";
+import { createAvailability } from "~/features/reservation/Availability";
 import { ownerCopy } from "../copy";
 import { useOwnerStore } from "../OwnerStoreContext";
 
@@ -29,30 +29,19 @@ export function OwnerTables() {
 	const [draftCount, setDraftCount] = useState(restaurant.tableCount);
 
 	const selected = useMemo(() => parseInputDate(dateValue), [dateValue]);
-	const openHours = restaurant.hoursByWeekday[selected.getUTCDay()] ?? [];
 
-	const usage = useMemo(
+	const report = useMemo(
 		() =>
-			openHours.map((hour) => {
-				const startTime = new Date(
-					Date.UTC(
-						selected.getUTCFullYear(),
-						selected.getUTCMonth(),
-						selected.getUTCDate(),
-						hour,
-					),
-				);
-				const used = slotUsage(reservations, restaurant.id, startTime);
-				const free = remainingTables(
-					reservations,
-					restaurant.id,
-					startTime,
-					restaurant.tableCount,
-				);
-				return { hour, used, free };
-			}),
-		[openHours, reservations, restaurant.id, restaurant.tableCount, selected],
+			createAvailability(reservations, {
+				restaurantId: restaurant.id,
+				tableCount: restaurant.tableCount,
+				autoConfirmEnabled: restaurant.autoConfirmEnabled,
+				lowTableThreshold: restaurant.lowTableThreshold,
+				hoursByWeekday: restaurant.hoursByWeekday,
+			}).dayReport(selected),
+		[reservations, restaurant, selected],
 	);
+	const openHours = report.openHours;
 
 	function handleSave() {
 		saveTableCount(draftCount);
@@ -89,12 +78,13 @@ export function OwnerTables() {
 					</p>
 				) : (
 					<div className="flex flex-col gap-2">
-						{usage.map(({ hour, used, free }) => {
+						{report.slots.map((slot) => {
+							const hour = slot.startTime.getUTCHours();
+							const { used, remaining: free, isFull } = slot;
 							const pct = Math.min(
 								100,
 								Math.round((used / restaurant.tableCount) * 100),
 							);
-							const isFull = free === 0;
 							return (
 								<div
 									className="flex items-center gap-4 rounded-[var(--radius-sm)] border border-[var(--border)] bg-surface2 px-4 py-3"
