@@ -109,6 +109,7 @@ export const ownerCopy = {
 		] as const,
 		save: "Salvar alterações",
 		saved: "Configurações atualizadas.",
+		saveError: "Não foi possível salvar as configurações. Tente novamente.",
 	},
 
 	months: [

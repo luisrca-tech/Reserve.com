@@ -1,14 +1,24 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { type FieldError, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
 import { Label } from "~/components/ui/Label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "~/components/ui/Select";
 import { Textarea } from "~/components/ui/Textarea";
 import { ownerCopy } from "../copy";
 import { useOwnerStore } from "../OwnerStoreContext";
+import { type UpdateSettingsInput, updateSettingsInput } from "../validation";
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
@@ -34,38 +44,65 @@ function scheduleFromHours(
 	});
 }
 
+function hoursFromSchedule(schedule: DaySchedule[]): Record<number, number[]> {
+	const hoursByWeekday: Record<number, number[]> = {};
+	schedule.forEach((day, weekday) => {
+		if (!day.open || day.closeHour <= day.openHour) return;
+		const hours: number[] = [];
+		for (let h = day.openHour; h < day.closeHour; h++) hours.push(h);
+		hoursByWeekday[weekday] = hours;
+	});
+	return hoursByWeekday;
+}
+
+function FieldMessage({ error }: { error?: FieldError }) {
+	if (!error?.message) return null;
+	return <p className="mt-1 text-[0.78rem] text-red">{error.message}</p>;
+}
+
 export function OwnerSettings() {
 	const { restaurant, saveSettings } = useOwnerStore();
-	const [name, setName] = useState(restaurant.name);
-	const [phone, setPhone] = useState(restaurant.phone);
-	const [bio, setBio] = useState(restaurant.description);
+	const {
+		register,
+		handleSubmit,
+		setValue,
+		formState: { errors, isSubmitting },
+	} = useForm<UpdateSettingsInput>({
+		resolver: zodResolver(updateSettingsInput),
+		defaultValues: {
+			name: restaurant.name,
+			phone: restaurant.phone,
+			bio: restaurant.description,
+			autoConfirmEnabled: restaurant.autoConfirmEnabled,
+			lowTableThreshold: restaurant.lowTableThreshold,
+			tableCount: restaurant.tableCount,
+			hoursByWeekday: restaurant.hoursByWeekday,
+		},
+	});
+
 	const [schedule, setSchedule] = useState<DaySchedule[]>(() =>
 		scheduleFromHours(restaurant.hoursByWeekday),
 	);
 
 	function setDay(weekday: number, patch: Partial<DaySchedule>) {
-		setSchedule((prev) =>
-			prev.map((d, i) => (i === weekday ? { ...d, ...patch } : d)),
-		);
+		setSchedule((prev) => {
+			const next = prev.map((d, i) => (i === weekday ? { ...d, ...patch } : d));
+			setValue("hoursByWeekday", hoursFromSchedule(next), {
+				shouldValidate: true,
+			});
+			return next;
+		});
 	}
 
-	function handleSave(e: React.FormEvent) {
-		e.preventDefault();
-		const hoursByWeekday: Record<number, number[]> = {};
-		schedule.forEach((day, weekday) => {
-			if (!day.open || day.closeHour <= day.openHour) return;
-			const hours: number[] = [];
-			for (let h = day.openHour; h < day.closeHour; h++) hours.push(h);
-			hoursByWeekday[weekday] = hours;
-		});
+	const onSubmit = handleSubmit((values) => {
 		saveSettings({
-			name: name.trim(),
-			phone: phone.trim(),
-			bio,
-			hoursByWeekday,
+			name: values.name,
+			phone: values.phone,
+			bio: values.bio,
+			hoursByWeekday: values.hoursByWeekday,
 		});
 		toast.success(ownerCopy.settings.saved);
-	}
+	});
 
 	return (
 		<div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-8">
@@ -78,31 +115,22 @@ export function OwnerSettings() {
 
 			<form
 				className="space-y-6 rounded-[var(--radius)] border border-[var(--border)] bg-surface p-6"
-				onSubmit={handleSave}
+				onSubmit={onSubmit}
 			>
 				<div>
 					<Label htmlFor="set-name">{ownerCopy.settings.nameLabel}</Label>
-					<Input
-						id="set-name"
-						onChange={(e) => setName(e.target.value)}
-						value={name}
-					/>
+					<Input id="set-name" {...register("name")} />
+					<FieldMessage error={errors.name} />
 				</div>
 				<div>
 					<Label htmlFor="set-phone">{ownerCopy.settings.phoneLabel}</Label>
-					<Input
-						id="set-phone"
-						onChange={(e) => setPhone(e.target.value)}
-						value={phone}
-					/>
+					<Input id="set-phone" {...register("phone")} />
+					<FieldMessage error={errors.phone} />
 				</div>
 				<div>
 					<Label htmlFor="set-bio">{ownerCopy.settings.bioLabel}</Label>
-					<Textarea
-						id="set-bio"
-						onChange={(e) => setBio(e.target.value)}
-						value={bio}
-					/>
+					<Textarea id="set-bio" {...register("bio")} />
+					<FieldMessage error={errors.bio} />
 				</div>
 
 				<div>
@@ -151,7 +179,7 @@ export function OwnerSettings() {
 					</div>
 				</div>
 
-				<Button full size="lg" type="submit">
+				<Button disabled={isSubmitting} full size="lg" type="submit">
 					{ownerCopy.settings.save}
 				</Button>
 			</form>
@@ -167,16 +195,17 @@ function HourSelect({
 	onChange: (hour: number) => void;
 }) {
 	return (
-		<select
-			className="rounded-md border border-[var(--border)] bg-surface px-2 py-1 text-[0.8rem] text-text focus:border-accent focus:outline-none"
-			onChange={(e) => onChange(Number(e.target.value))}
-			value={value}
-		>
-			{HOURS.map((h) => (
-				<option key={h} value={h}>
-					{ownerCopy.settings.hourValue(h)}
-				</option>
-			))}
-		</select>
+		<Select onValueChange={(v) => onChange(Number(v))} value={String(value)}>
+			<SelectTrigger aria-label={ownerCopy.settings.hourValue(value)}>
+				<SelectValue />
+			</SelectTrigger>
+			<SelectContent>
+				{HOURS.map((h) => (
+					<SelectItem key={h} value={String(h)}>
+						{ownerCopy.settings.hourValue(h)}
+					</SelectItem>
+				))}
+			</SelectContent>
+		</Select>
 	);
 }
