@@ -47,9 +47,7 @@ describe("reservationState — expiry", () => {
 			now: new Date(T0 + expiryMs),
 		});
 		expect(nextReservations[0]?.status).toBe("expired");
-		expect(transitions).toEqual([
-			{ id: "p1", from: "pending", to: "expired" },
-		]);
+		expect(transitions).toEqual([{ id: "p1", from: "pending", to: "expired" }]);
 	});
 
 	it("keeps the reservation pending before the window elapses", () => {
