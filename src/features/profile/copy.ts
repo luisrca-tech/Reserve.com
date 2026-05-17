@@ -11,6 +11,6 @@ export const profileCopy = {
 	cancel: "Cancelar",
 	logout: "Sair da conta",
 	saved: "Perfil atualizado.",
-	nameRequired: "Informe seu nome.",
-	emailRequired: "Informe um e-mail válido.",
+	emailTaken: "Este e-mail já está em uso.",
+	saveError: "Não foi possível atualizar o perfil.",
 } as const;

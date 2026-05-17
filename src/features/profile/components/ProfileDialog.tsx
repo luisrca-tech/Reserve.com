@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+import { type FieldError, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/Button";
@@ -14,8 +16,15 @@ import {
 import { Input } from "~/components/ui/Input";
 import { Label } from "~/components/ui/Label";
 import { useSessionState } from "~/features/session/SessionContext";
+import { api } from "~/trpc/react";
 import { profileCopy } from "../copy";
 import { toProfileFormValues } from "../types";
+import { type UpdateProfileInput, updateProfileInput } from "../validation";
+
+function FieldMessage({ error }: { error?: FieldError }) {
+	if (!error?.message) return null;
+	return <p className="mt-1 text-[0.78rem] text-red">{error.message}</p>;
+}
 
 export function ProfileDialog({
 	open,
@@ -26,34 +35,41 @@ export function ProfileDialog({
 	onOpenChange: (open: boolean) => void;
 	onLogout: () => void;
 }) {
-	const { user, updateProfile } = useSessionState();
-	const [name, setName] = useState("");
-	const [email, setEmail] = useState("");
-	const [phone, setPhone] = useState("");
+	const { user, refreshSession } = useSessionState();
+	const {
+		register,
+		handleSubmit,
+		reset,
+		setError,
+		formState: { errors, isSubmitting },
+	} = useForm<UpdateProfileInput>({
+		resolver: zodResolver(updateProfileInput),
+	});
 
 	useEffect(() => {
-		if (open && user) {
-			const values = toProfileFormValues(user);
-			setName(values.name);
-			setEmail(values.email);
-			setPhone(values.phone);
-		}
-	}, [open, user]);
+		if (open && user) reset(toProfileFormValues(user));
+	}, [open, user, reset]);
 
-	function handleSubmit(e: React.FormEvent) {
-		e.preventDefault();
-		if (name.trim() === "") {
-			toast.error(profileCopy.nameRequired);
-			return;
+	const updateProfile = api.user.updateProfile.useMutation();
+
+	const onSubmit = handleSubmit(async (values) => {
+		try {
+			await updateProfile.mutateAsync(values);
+			await refreshSession();
+			toast.success(profileCopy.saved);
+			onOpenChange(false);
+		} catch (error) {
+			const conflict =
+				error instanceof Error && "data" in error
+					? (error as { data?: { code?: string } }).data?.code === "CONFLICT"
+					: false;
+			if (conflict) {
+				setError("email", { message: profileCopy.emailTaken });
+				return;
+			}
+			toast.error(profileCopy.saveError);
 		}
-		if (!email.includes("@")) {
-			toast.error(profileCopy.emailRequired);
-			return;
-		}
-		updateProfile({ name: name.trim(), email: email.trim(), phone });
-		toast.success(profileCopy.saved);
-		onOpenChange(false);
-	}
+	});
 
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
@@ -63,36 +79,29 @@ export function ProfileDialog({
 					<DialogDescription>{profileCopy.description}</DialogDescription>
 				</DialogHeader>
 
-				<form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+				<form className="flex flex-col gap-4" onSubmit={onSubmit}>
 					<div>
 						<Label htmlFor="profile-name">{profileCopy.nameLabel}</Label>
-						<Input
-							id="profile-name"
-							onChange={(e) => setName(e.target.value)}
-							value={name}
-						/>
+						<Input id="profile-name" {...register("name")} />
+						<FieldMessage error={errors.name} />
 					</div>
 					<div>
 						<Label htmlFor="profile-email">{profileCopy.emailLabel}</Label>
-						<Input
-							id="profile-email"
-							onChange={(e) => setEmail(e.target.value)}
-							type="email"
-							value={email}
-						/>
+						<Input id="profile-email" type="email" {...register("email")} />
+						<FieldMessage error={errors.email} />
 					</div>
 					<div>
 						<Label htmlFor="profile-phone">{profileCopy.phoneLabel}</Label>
 						<Input
 							id="profile-phone"
-							onChange={(e) => setPhone(e.target.value)}
 							placeholder={profileCopy.phonePlaceholder}
-							value={phone}
+							{...register("phone")}
 						/>
+						<FieldMessage error={errors.phone} />
 					</div>
 
 					<div className="mt-2 flex flex-col gap-2">
-						<Button full size="lg" type="submit">
+						<Button disabled={isSubmitting} full size="lg" type="submit">
 							{profileCopy.save}
 						</Button>
 						<Button full onClick={onLogout} type="button" variant="danger">
