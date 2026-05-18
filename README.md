@@ -1,29 +1,58 @@
-# Create T3 App
+# ReServe — Sistema Inteligente de Reserva de Mesas
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+> **Projeto Integrador: Análise de Soluções Integradas para Organizações** > **Centro Universitário Senac — Campus Santo Amaro** > **Curso:** Tecnologia em Análise e Desenvolvimento de Sistemas (ADS)  
+> **Professor Orientador:** Anderson Clayton Garcia Lopes  
 
-## What's next? How do I make an app with this?
+---
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+## 📝 Sobre o Projeto
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+O **ReServe** é um Produto Mínimo Viável (MVP) desenvolvido com o objetivo de mitigar gargalos operacionais no setor gastronômico, como a ociosidade de mesas, imprevisibilidade de fluxo para os gestores e as filas de espera presenciais. A plataforma adota uma abordagem *Mobile-First* com interfaces responsivas dedicadas a duas frentes de valor:
+* **B2C (Cliente Final):** Permite a busca otimizada por restaurantes (filtros por tags), escolha programada de datas, horários e seleção de mesas em tempo real, evitando o risco de *overbooking*.
+* **B2B (Gestor do Restaurante):** Painel administrativo inteligente focado no controle do salão, monitoramento de status das mesas e aplicação automática de regras de negócio (como cancelamento automático após 15 minutos de atraso).
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+---
 
-## Learn More
+## 🚀 Demonstração e Links Oficiais
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+Para auditoria técnica e validação das funcionalidades integradas, utilize os endereços abaixo:
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+* **🌐 Plataforma Publicada (Deploy na Vercel):** [https://reserve-com.vercel.app/](https://reserve-com.vercel.app/)
+* **🎬 Vídeo Demonstrativo (Apresentação do MVP):** [Assista no YouTube](https://www.youtube.com/watch?v=ChJ9qlOg17Q)
+* **📁 Repositório do Código-Fonte:** [GitHub - Reserve.com](https://github.com/luisrca-tech/Reserve.com/tree/main)
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+---
 
-## How do I deploy this?
+## 🛠️ Stack Tecnológica
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+O ecossistema foi projetado utilizando ferramentas modernas que garantem tipagem estrita, performance e segurança em camadas:
+
+* **Framework Principal:** [Next.js](https://nextjs.org/) & [React](https://react.dev/) (Arquitetura unificada de rotas e componentes)
+* **Estilização e Componentes:** [Tailwind CSS](https://tailwindcss.com/), [Radix UI](https://www.radix-ui.com/) e [shadcn/ui](https://ui.shadcn.com/)
+* **Banco de Dados & ORM:** [PostgreSQL](https://www.postgresql.org/) integrado ao [Drizzle ORM](https://orm.drizzle.team/) (Esquemas lógicos fortemente tipados divididos por domínio)
+* **Autenticação e Segurança:** [Better Auth](https://www.better-auth.com/) com controle de acesso baseado em funções (`role-based route guards`)
+* **Qualidade de Código e Testes:** [Vitest](https://vitest.dev/) (Testes unitários de regras de negócio) e [Biome](https://biomejs.dev/) (Linter e formatador de código)
+
+---
+
+## 👥 Integrantes do Grupo
+
+* **Mario Alves da Silva**
+* **Julio Boaventura Ladalardo**
+* **Luis Felipe da Rocha Cruz Alves Oliveira**
+* **Yuri Leite Barcelos**
+* **Gustavo Pedroza Aciole Bonfim**
+* **Raphael Vicente Calábria**
+
+---
+
+## 🗺️ Estrutura Lógica do Banco de Dados
+
+O banco de dados relacional está estruturado textualmente com base em quatro entidades centrais:
+1.  `Users`: Cadastro de clientes e administradores (`id`, `name`, `email`, `phone`, `role`, `created_at`).
+2.  `Restaurants`: Informações comerciais, bio, tags de busca e URLs de imagens do estabelecimento.
+3.  `Tables`: Mapeamento físico do salão por capacidade, número da mesa e controle de status em tempo real.
+4.  `Reservations`: Elo central do sistema. Sincroniza o usuário, restaurante e mesa específica impedindo duplicidade de horários.
+
+---
+*Este projeto foi desenvolvido como parte dos requisitos de aprovação do módulo de Projeto Integrador do Centro Universitário Senac. Ano de Conclusão: 2026.*
