@@ -30,11 +30,6 @@ export const metadata: Metadata = {
 	authors: [{ name: "ReServe" }],
 	category: "food",
 	alternates: { canonical: "/" },
-	icons: {
-		icon: "/favicon.ico",
-		shortcut: "/favicon.ico",
-		apple: "/favicon.ico",
-	},
 	openGraph: {
 		type: "website",
 		locale: "pt_BR",
