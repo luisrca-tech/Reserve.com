@@ -7,10 +7,54 @@ import { Toaster } from "~/components/ui/sonner";
 import { SessionProvider } from "~/features/session/SessionContext";
 import { TRPCReactProvider } from "~/trpc/react";
 
+const siteUrl =
+	process.env.NEXT_PUBLIC_SITE_URL ?? "https://reserve-com.vercel.app";
+
 export const metadata: Metadata = {
-	title: "ReServe — Reserve sua mesa",
-	description: "Reserve mesas nos melhores restaurantes da cidade em segundos.",
-	icons: [{ rel: "icon", url: "/favicon.ico" }],
+	metadataBase: new URL(siteUrl),
+	title: {
+		default: "ReServe — Reserve sua mesa em segundos",
+		template: "%s · ReServe",
+	},
+	description:
+		"ReServe é a plataforma de reservas inteligentes para restaurantes: encontre os melhores restaurantes da cidade, escolha sua mesa em tempo real e agende em segundos — sem filas, sem espera.",
+	applicationName: "ReServe",
+	keywords: [
+		"reserva de restaurante",
+		"reservar mesa",
+		"restaurantes",
+		"agendamento de mesa",
+		"reserva online",
+		"ReServe",
+	],
+	authors: [{ name: "ReServe" }],
+	category: "food",
+	alternates: { canonical: "/" },
+	icons: {
+		icon: "/favicon.ico",
+		shortcut: "/favicon.ico",
+		apple: "/favicon.ico",
+	},
+	openGraph: {
+		type: "website",
+		locale: "pt_BR",
+		url: siteUrl,
+		siteName: "ReServe",
+		title: "ReServe — Reserve sua mesa em segundos",
+		description:
+			"Encontre os melhores restaurantes da cidade, escolha sua mesa em tempo real e agende em segundos — sem filas, sem espera.",
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: "ReServe — Reserve sua mesa em segundos",
+		description:
+			"Encontre os melhores restaurantes, escolha a mesa e agende — sem filas, sem espera.",
+	},
+	robots: {
+		index: true,
+		follow: true,
+		googleBot: { index: true, follow: true },
+	},
 };
 
 const cormorant = Cormorant_Garamond({
