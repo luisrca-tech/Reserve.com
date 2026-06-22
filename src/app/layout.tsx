@@ -43,12 +43,21 @@ export const metadata: Metadata = {
 		title: "ReServe — Reserve sua mesa em segundos",
 		description:
 			"Encontre os melhores restaurantes da cidade, escolha sua mesa em tempo real e agende em segundos — sem filas, sem espera.",
+		images: [
+			{
+				url: "/opengraph-image.png",
+				width: 1200,
+				height: 630,
+				alt: "ReServe — Reserve sua mesa nos melhores restaurantes da cidade",
+			},
+		],
 	},
 	twitter: {
 		card: "summary_large_image",
 		title: "ReServe — Reserve sua mesa em segundos",
 		description:
 			"Encontre os melhores restaurantes, escolha a mesa e agende — sem filas, sem espera.",
+		images: ["/opengraph-image.png"],
 	},
 	robots: {
 		index: true,
